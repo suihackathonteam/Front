@@ -4,6 +4,8 @@ import Dashboard from './Dashboard'
 import Home from './Home'
 import About from './About'
 import Services from './Services'
+import AdminPanel from './AdminPanel'
+import WorkerPanel from './WorkerPanel'
 
 function App() {
   return (
@@ -12,6 +14,8 @@ function App() {
         <Route path="/" element={<Layout />}>
           <Route index element={<Home />} />
           <Route path="dashboard" element={<Dashboard />} />
+          <Route path="worker" element={<WorkerPanel />} />
+          <Route path="admin" element={<AdminPanel />} />
           <Route path="about" element={<About />} />
           <Route path="services" element={<Services />} />
         </Route>

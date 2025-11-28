@@ -1,0 +1,175 @@
+/**
+ * Identity System Türleri
+ * Smart contract yapılarını TypeScript'e çevirir
+ */
+
+// Worker Card yapısı
+export interface WorkerCard {
+  id: string // Object ID
+  worker_address: string
+  card_number: string
+  name: string
+  department: string
+  is_active: boolean // Card active status
+  total_work_hours: number // milliseconds
+  total_production: number
+  efficiency_score: number
+  last_checkpoint_hash: number[]
+}
+
+// Door yapısı
+export interface Door {
+  door_id: number
+  name: string
+  location: string
+  is_active: boolean
+}
+
+// Machine yapısı
+export interface Machine {
+  machine_id: number
+  name: string
+  machine_type: string
+  is_active: boolean
+}
+
+// Event türleri
+export interface DoorAccessEvent {
+  worker_address: string
+  card_number: string
+  door_id: number
+  door_name: string
+  access_type: number // 0 = entry, 1 = exit
+  timestamp_ms: number
+}
+
+export interface MachineUsageEvent {
+  worker_address: string
+  card_number: string
+  machine_id: number
+  machine_name: string
+  usage_duration_ms: number
+  production_count: number
+  efficiency_percentage: number
+  timestamp_ms: number
+}
+
+export interface ClockEvent {
+  worker_address: string
+  card_number: string
+  action_type: number // 0 = clock in, 1 = clock out
+  timestamp_ms: number
+}
+
+export interface AwardEvent {
+  worker_address: string
+  card_number: string
+  award_type: string
+  points: number
+  description: string
+  timestamp_ms: number
+}
+
+export interface StatsUpdateEvent {
+  worker_address: string
+  total_work_hours_ms: number
+  total_production: number
+  efficiency_score: number
+  checkpoint_hash: number[]
+  timestamp_ms: number
+}
+
+// UI için formlar
+export interface RegisterDoorForm {
+  name: string
+  location: string
+}
+
+export interface RegisterMachineForm {
+  name: string
+  machine_type: string
+}
+
+export interface IssueWorkerCardForm {
+  worker_address: string
+  card_number: string
+  name: string
+  department: string
+}
+
+export interface RecordMachineUsageForm {
+  machine_id: number
+  usage_duration_ms: number
+  production_count: number
+  efficiency_percentage: number
+}
+
+export interface IssueAwardForm {
+  award_type: string
+  points: number
+  description: string
+}
+
+export interface UpdateWorkerCardForm {
+  name: string
+  department: string
+}
+
+export interface UpdateDoorForm {
+  name: string
+  location: string
+}
+
+export interface UpdateMachineForm {
+  name: string
+  machine_type: string
+}
+
+export interface BatchRegisterDoorsForm {
+  names: string[]
+  locations: string[]
+}
+
+export interface BatchRegisterMachinesForm {
+  names: string[]
+  machine_types: string[]
+}
+
+export interface BatchIssueWorkerCardsForm {
+  worker_addresses: string[]
+  card_numbers: string[]
+  names: string[]
+  departments: string[]
+}
+
+// Dashboard için işlenmiş veri türleri
+export interface WorkerStats {
+  address: string
+  name: string
+  card_number: string
+  department: string
+  work_hours_formatted: string
+  total_production: number
+  efficiency_score: number
+  last_activity: Date | null
+}
+
+export interface DoorActivity {
+  id: string
+  worker_name: string
+  worker_address: string
+  door_name: string
+  access_type: 'entry' | 'exit'
+  timestamp: Date
+  card_number: string
+}
+
+export interface MachineActivity {
+  id: string
+  worker_name: string
+  machine_name: string
+  duration_formatted: string
+  production: number
+  efficiency: number
+  timestamp: Date
+}

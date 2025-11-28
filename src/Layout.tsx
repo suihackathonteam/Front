@@ -1,11 +1,13 @@
 import { Outlet, useNavigate } from 'react-router-dom'
 import { useCurrentAccount, useDisconnectWallet } from '@mysten/dapp-kit'
 import SuiConnectButton from './SuiConnectButton'
+import { useAdminCap } from './hooks/useIdentity'
 import './Dashboard.css'
 
 function Layout() {
   const currentAccount = useCurrentAccount()
   const { mutate: disconnect } = useDisconnectWallet()
+  const { isAdmin } = useAdminCap()
   const navigate = useNavigate()
 
   const handleLogout = () => {
@@ -25,6 +27,15 @@ function Layout() {
             <a onClick={() => navigate('/')}>🏠 Ana Sayfa</a>
             <a onClick={() => navigate('/about')}>📖 Hakkımızda</a>
             <a onClick={() => navigate('/services')}>💼 Hizmetler</a>
+            {currentAccount && (
+              <>
+                <a onClick={() => navigate('/dashboard')}>📊 Dashboard</a>
+                <a onClick={() => navigate('/worker')}>👤 Çalışan</a>
+              </>
+            )}
+            {isAdmin && (
+              <a onClick={() => navigate('/admin')} style={{ color: '#43e97b' }}>🔐 Admin</a>
+            )}
           </nav>
 
           <div className="user-section">

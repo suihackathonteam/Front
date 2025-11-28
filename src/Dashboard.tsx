@@ -1,82 +1,201 @@
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import './Dashboard.css'
 import { useCurrentAccount } from '@mysten/dapp-kit'
 import SuiConnectButton from './SuiConnectButton'
-
-// Örnek veri setleri
-const doorAccessData = [
-  { time: '08:00', girisler: 12, cikislar: 2 },
-  { time: '09:00', girisler: 8, cikislar: 1 },
-  { time: '12:00', girisler: 5, cikislar: 8 },
-  { time: '13:00', girisler: 7, cikislar: 3 },
-  { time: '17:00', girisler: 3, cikislar: 15 },
-  { time: '18:00', girisler: 1, cikislar: 12 },
-]
-
-const machineUsageData = [
-  { makine: 'CNC-001', kullanim: 8.5, urun: 245, verim: 92 },
-  { makine: 'CNC-002', kullanim: 7.8, urun: 210, verim: 88 },
-  { makine: 'Pres-001', kullanim: 6.5, urun: 180, verim: 85 },
-  { makine: 'Kesim-001', kullanim: 8.2, urun: 320, verim: 95 },
-  { makine: 'Paket-001', kullanim: 7.5, urun: 450, verim: 90 },
-]
-
-const employeeProductivity = [
-  { name: 'Ahmet Y.', makine: 'CNC-001', sure: 8.2, urun: 125, verim: 94 },
-  { name: 'Ayşe K.', makine: 'Kesim-001', sure: 7.8, urun: 156, verim: 92 },
-  { name: 'Mehmet D.', makine: 'CNC-002', sure: 8.5, urun: 118, verim: 88 },
-  { name: 'Zeynep A.', makine: 'Paket-001', sure: 7.5, urun: 220, verim: 96 },
-  { name: 'Can S.', makine: 'Pres-001', sure: 6.8, urun: 95, verim: 85 },
-]
-
-const employeeAwards = [
-  { 
-    id: 1, 
-    calisan: 'Ayşe Kaya', 
-    odul: '🏆 Ayın Çalışanı', 
-    tarih: '28.11.2025', 
-    aciklama: 'En yüksek üretim performansı',
-    puan: 100
-  },
-  { 
-    id: 2, 
-    calisan: 'Mehmet Demir', 
-    odul: '⭐ Verimlilik Yıldızı', 
-    tarih: '25.11.2025', 
-    aciklama: 'Fire oranı %0.5 altında',
-    puan: 75
-  },
-  { 
-    id: 3, 
-    calisan: 'Zeynep Aydın', 
-    odul: '🎯 Hedef Şampiyonu', 
-    tarih: '20.11.2025', 
-    aciklama: 'Aylık hedefi %120 tamamlama',
-    puan: 85
-  },
-  { 
-    id: 4, 
-    calisan: 'Ahmet Yılmaz', 
-    odul: '💎 Kalite Ödülü', 
-    tarih: '15.11.2025', 
-    aciklama: 'Hatasız üretim - 30 gün',
-    puan: 90
-  },
-]
-
-const realtimeStats = [
-  { icon: '🚪', title: 'Aktif Personel', value: '47', change: '+3', color: '#667eea' },
-  { icon: '⚙️', title: 'Çalışan Makine', value: '12/15', change: '80%', color: '#764ba2' },
-  { icon: '📦', title: 'Günlük Üretim', value: '1,245', change: '+125', color: '#f093fb' },
-  { icon: '🎯', title: 'Verimlilik', value: '91%', change: '+3%', color: '#4facfe' },
-]
+import { useIdentityEvents } from './hooks/useIdentity'
 
 function Dashboard() {
   const [selectedView, setSelectedView] = useState('overview')
   const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null)
+  const currentAccount = useCurrentAccount()
 
-    const currentAccount = useCurrentAccount()
+  // Blockchain'den event'leri çek
+  const { events: allEvents } = useIdentityEvents()
+  
+  // State'ler
+  const [workerCards, setWorkerCards] = useState<any[]>([])
+
+  // Event'lerden verileri parse et
+  const parsedEvents = useMemo(() => {
+    const doorEvents: any[] = []
+    const machineEvents: any[] = []
+    const clockEvents: any[] = []
+    const awardEvents: any[] = []
+
+    allEvents.forEach((event) => {
+      const eventType = event.type.split('::').pop()
+      const parsedJson = event.parsedJson
+
+      if (eventType === 'DoorAccessEvent') {
+        doorEvents.push({
+          worker_address: parsedJson.worker_address,
+          door_id: parsedJson.door_id,
+          timestamp: new Date(Number(parsedJson.timestamp)),
+          is_entry: parsedJson.is_entry,
+        })
+      } else if (eventType === 'MachineUsageEvent') {
+        machineEvents.push({
+          worker_address: parsedJson.worker_address,
+          machine_id: parsedJson.machine_id,
+          timestamp: new Date(Number(parsedJson.timestamp)),
+          duration: Number(parsedJson.duration),
+          production_count: Number(parsedJson.production_count),
+        })
+      } else if (eventType === 'ClockEvent') {
+        clockEvents.push({
+          worker_address: parsedJson.worker_address,
+          timestamp: new Date(Number(parsedJson.timestamp)),
+          action_type: Number(parsedJson.action_type),
+        })
+      } else if (eventType === 'AwardEvent') {
+        awardEvents.push({
+          worker_address: parsedJson.worker_address,
+          award_type: parsedJson.award_type,
+          points: Number(parsedJson.points),
+          timestamp: new Date(Number(parsedJson.timestamp)),
+        })
+      }
+    })
+
+    return { doorEvents, machineEvents, clockEvents, awardEvents }
+  }, [allEvents])
+
+  // WorkerCard'ları çek
+  useEffect(() => {
+    const fetchWorkerCards = async () => {
+      try {
+        // Event'lerden worker_address'leri topluyoruz
+        // Her unique address için bir kart var diyoruz
+        const uniqueAddresses = new Set<string>()
+        parsedEvents.awardEvents.forEach(e => uniqueAddresses.add(e.worker_address))
+        parsedEvents.clockEvents.forEach(e => uniqueAddresses.add(e.worker_address))
+        parsedEvents.doorEvents.forEach(e => uniqueAddresses.add(e.worker_address))
+        parsedEvents.machineEvents.forEach(e => uniqueAddresses.add(e.worker_address))
+
+        // Her adres için istatistikleri hesapla
+        const cards = Array.from(uniqueAddresses).map((address, index) => {
+          const userMachineEvents = parsedEvents.machineEvents.filter(e => e.worker_address === address)
+          const totalProduction = userMachineEvents.reduce((sum, e) => sum + e.production_count, 0)
+          const totalDuration = userMachineEvents.reduce((sum, e) => sum + e.duration, 0)
+          const efficiency = totalProduction > 0 ? Math.min(100, Math.round((totalProduction / Math.max(1, userMachineEvents.length)) * 5)) : 0
+
+          return {
+            id: `card-${index}`,
+            worker_address: address,
+            card_number: `KART-${(index + 1).toString().padStart(4, '0')}`,
+            name: `Çalışan ${index + 1}`,
+            department: userMachineEvents.length > 0 ? userMachineEvents[0].machine_id : 'Genel',
+            is_active: true,
+            total_work_hours: totalDuration,
+            total_production: totalProduction,
+            efficiency_score: efficiency,
+          }
+        })
+
+        setWorkerCards(cards)
+      } catch (err) {
+        console.error('Worker cards hesaplama hatası:', err)
+      }
+    }
+
+    if (currentAccount && allEvents.length > 0) {
+      fetchWorkerCards()
+    }
+  }, [currentAccount, parsedEvents, allEvents.length])
+
+  // Not: SystemRegistry'den doors ve machines dinamik olarak çekilebilir
+  // Ancak Table içeriğini okumak için indexer kullanılması önerilir
+
+  // Saatlik kapı geçiş verileri
+  const doorAccessData = useMemo(() => {
+    const hourlyData: { [key: string]: { girisler: number; cikislar: number } } = {}
+
+    parsedEvents.doorEvents.forEach((event) => {
+      const hour = event.timestamp.getHours()
+      const timeKey = `${hour.toString().padStart(2, '0')}:00`
+
+      if (!hourlyData[timeKey]) {
+        hourlyData[timeKey] = { girisler: 0, cikislar: 0 }
+      }
+
+      if (event.is_entry) {
+        hourlyData[timeKey].girisler++
+      } else {
+        hourlyData[timeKey].cikislar++
+      }
+    })
+
+    return Object.entries(hourlyData)
+      .map(([time, data]) => ({ time, ...data }))
+      .sort((a, b) => a.time.localeCompare(b.time))
+  }, [parsedEvents.doorEvents])
+
+  // Makine kullanım verileri
+  const machineUsageData = useMemo(() => {
+    const machineStats: { [key: string]: { totalDuration: number; totalProduction: number; count: number } } = {}
+
+    parsedEvents.machineEvents.forEach((event) => {
+      if (!machineStats[event.machine_id]) {
+        machineStats[event.machine_id] = { totalDuration: 0, totalProduction: 0, count: 0 }
+      }
+
+      machineStats[event.machine_id].totalDuration += event.duration
+      machineStats[event.machine_id].totalProduction += event.production_count
+      machineStats[event.machine_id].count++
+    })
+
+    return Object.entries(machineStats).map(([makine, stats]) => ({
+      makine,
+      kullanim: (stats.totalDuration / 3600).toFixed(1), // saniyeden saate
+      urun: stats.totalProduction,
+      verim: stats.count > 0 ? Math.min(100, Math.round((stats.totalProduction / stats.count) * 10)) : 0,
+    }))
+  }, [parsedEvents.machineEvents])
+
+  // Çalışan performans verileri
+  const employeeProductivity = useMemo(() => {
+    return workerCards.map((card) => ({
+      name: card.name,
+      makine: card.department,
+      sure: (card.total_work_hours / 3600).toFixed(1),
+      urun: card.total_production,
+      verim: card.efficiency_score,
+    }))
+  }, [workerCards])
+
+  // Çalışan ödül verileri
+  const employeeAwards = useMemo(() => {
+    return parsedEvents.awardEvents.slice(0, 4).map((award, index) => {
+      const workerCard = workerCards.find((card) => card.worker_address === award.worker_address)
+      const awardTypeText = new TextDecoder().decode(new Uint8Array(award.award_type))
+
+      return {
+        id: index + 1,
+        calisan: workerCard?.name || award.worker_address.slice(0, 8) + '...',
+        odul: `🏆 ${awardTypeText}`,
+        tarih: award.timestamp.toLocaleDateString('tr-TR'),
+        aciklama: `${award.points} puan ödülü`,
+        puan: award.points,
+      }
+    })
+  }, [parsedEvents.awardEvents, workerCards])
+
+  // Gerçek zamanlı istatistikler
+  const realtimeStats = useMemo(() => {
+    const activeWorkers = workerCards.filter((card) => card.is_active).length
+    const totalProduction = workerCards.reduce((sum, card) => sum + card.total_production, 0)
+    const avgEfficiency = workerCards.length > 0
+      ? Math.round(workerCards.reduce((sum, card) => sum + card.efficiency_score, 0) / workerCards.length)
+      : 0
+
+    return [
+      { icon: '🚪', title: 'Aktif Personel', value: String(activeWorkers), change: `/${workerCards.length}`, color: '#667eea' },
+      { icon: '⚙️', title: 'Çalışan Makine', value: `${machineUsageData.length}`, change: '100%', color: '#764ba2' },
+      { icon: '📦', title: 'Toplam Üretim', value: String(totalProduction), change: '', color: '#f093fb' },
+      { icon: '🎯', title: 'Ortalama Verimlilik', value: `${avgEfficiency}%`, change: '', color: '#4facfe' },
+    ]
+  }, [workerCards, machineUsageData])
 
 	  if(!currentAccount){
 
@@ -128,10 +247,27 @@ function Dashboard() {
 
           {selectedView === 'overview' && (
             <>
+              {allEvents.length === 0 ? (
+                <div className="chart-card full-width" style={{ textAlign: 'center', padding: '40px' }}>
+                  <h3>📊 Henüz Veri Yok</h3>
+                  <p style={{ color: '#b8b8b8', marginTop: '16px' }}>
+                    Sistem kullanılmaya başlandığında burada gerçek zamanlı veriler görünecek.
+                  </p>
+                  <p style={{ color: '#b8b8b8', marginTop: '8px' }}>
+                    Admin panelinden işçi kartları oluşturup, kapı ve makine kayıtları ekleyin.
+                  </p>
+                </div>
+              ) : (
+                <>
               {/* Charts Section */}
               <div className="charts-section">
                 <div className="chart-card">
                   <h3>Saatlik Kapı Geçiş Analizi</h3>
+                  {doorAccessData.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '60px', color: '#b8b8b8' }}>
+                      <p>Henüz kapı geçiş kaydı yok</p>
+                    </div>
+                  ) : (
                   <ResponsiveContainer width="100%" height={300}>
                     <LineChart data={doorAccessData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#3a3a3a" />
@@ -146,10 +282,16 @@ function Dashboard() {
                       <Line type="monotone" dataKey="cikislar" stroke="#764ba2" strokeWidth={2} name="Çıkış" />
                     </LineChart>
                   </ResponsiveContainer>
+                  )}
                 </div>
 
                 <div className="chart-card">
                   <h3>Makine Kullanım Verimliliği</h3>
+                  {machineUsageData.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '60px', color: '#b8b8b8' }}>
+                      <p>Henüz makine kullanım kaydı yok</p>
+                    </div>
+                  ) : (
                   <ResponsiveContainer width="100%" height={300}>
                     <BarChart data={machineUsageData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#3a3a3a" />
@@ -163,11 +305,17 @@ function Dashboard() {
                       <Bar dataKey="verim" fill="#667eea" name="Verimlilik %" />
                     </BarChart>
                   </ResponsiveContainer>
+                  )}
                 </div>
               </div>
 
               <div className="chart-card full-width">
                 <h3>Çalışan Üretim Performansı</h3>
+                {employeeProductivity.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '60px', color: '#b8b8b8' }}>
+                    <p>Henüz çalışan performans verisi yok</p>
+                  </div>
+                ) : (
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={employeeProductivity}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#3a3a3a" />
@@ -182,7 +330,10 @@ function Dashboard() {
                     <Bar dataKey="verim" fill="#764ba2" name="Verimlilik %" />
                   </BarChart>
                 </ResponsiveContainer>
+                )}
               </div>
+              </>
+              )}
             </>
           )}
 
@@ -269,8 +420,8 @@ function Dashboard() {
                   <div key={index} className="machine-card">
                     <div className="machine-header">
                       <h3>{machine.makine}</h3>
-                      <span className={`machine-status ${machine.kullanim > 7 ? 'active' : 'idle'}`}>
-                        {machine.kullanim > 7 ? '● Aktif' : '○ Boşta'}
+                      <span className={`machine-status ${parseFloat(machine.kullanim) > 7 ? 'active' : 'idle'}`}>
+                        {parseFloat(machine.kullanim) > 7 ? '● Aktif' : '○ Boşta'}
                       </span>
                     </div>
                     <div className="machine-stats">
@@ -460,11 +611,6 @@ function Dashboard() {
 
         </div>
       </main>
-
-      {/* Dashboard Footer */}
-      <footer className="dashboard-footer">
-        <p>&copy; 2025 TeamPro. Tüm hakları saklıdır.</p>
-      </footer>
     </div>
   )
 }
