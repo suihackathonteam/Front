@@ -25,7 +25,6 @@ function Layout() {
             <a onClick={() => navigate('/')}>🏠 Ana Sayfa</a>
             <a onClick={() => navigate('/about')}>📖 Hakkımızda</a>
             <a onClick={() => navigate('/services')}>💼 Hizmetler</a>
-            <a onClick={() => navigate('/contact')}>📧 İletişim</a>
           </nav>
 
           <div className="user-section">

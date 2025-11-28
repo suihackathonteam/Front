@@ -19,7 +19,7 @@ function About() {
               işletmelere güvenilir ve şeffaf bir takip sistemi sağlamaktadır.
             </p>
           </div>
-
+			<br />
           <div className="info-grid">
             <div className="info-card">
               <h3>🎯 Misyonumuz</h3>
@@ -29,7 +29,6 @@ function About() {
                 şeffaf ve değiştirilemez kayıtlar tutmak.
               </p>
             </div>
-
             <div className="info-card">
               <h3>👁️ Vizyonumuz</h3>
               <p>
@@ -49,7 +48,7 @@ function About() {
               </ul>
             </div>
           </div>
-
+			<br />
           <div className="chart-card full-width">
             <h3>🏆 Neden TeamPro?</h3>
             <div className="stats-grid">

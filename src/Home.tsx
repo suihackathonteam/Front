@@ -1,10 +1,6 @@
 import './Home.css'
-import SuiConnectButton from './SuiConnectButton'
 
 function Home() {
-
-	
-
   return (
     <div className="home-container">
       {/* Main Content */}
@@ -35,15 +31,7 @@ function Home() {
               <p>Bireysel ve takım performans metrikleri, hedef takibi</p>
             </div>
           </div>
-
-          <div className="cta-section">
-            <p className="cta-text">Sisteme erişmek için Sui cüzdanınızı bağlayın</p>
-            <div className="cta-button">
-              <SuiConnectButton />
-            </div>
-          </div>
         </div>
-
         <div className="info-section">
           <h2>Sistem Özellikleri</h2>
           <div className="info-grid">

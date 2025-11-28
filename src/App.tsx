@@ -4,7 +4,6 @@ import Dashboard from './Dashboard'
 import Home from './Home'
 import About from './About'
 import Services from './Services'
-import Contact from './Contact'
 
 function App() {
   return (
@@ -15,7 +14,6 @@ function App() {
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="about" element={<About />} />
           <Route path="services" element={<Services />} />
-          <Route path="contact" element={<Contact />} />
         </Route>
       </Routes>
     </Router>
