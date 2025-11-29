@@ -1,89 +1,87 @@
 import { useState, useEffect } from "react";
 import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useWorkerCard, useIdentityTransaction, useIdentityEvents, useWorkerAwardHistory } from "../hooks/useIdentity";
-import { buildClockInOutTx } from "../utils/transactions";
+import { buildClockInOutTx, buildIncrementProductionTx, buildRecordDoorAccessTx, buildRecordMachineUsageTx } from "../utils/transactions";
 import { ACTION_TYPES, CONTRACT_CONFIG } from "../config/contracts";
 import SuiConnectButton from "../components/SuiConnectButton";
 import "../styles/WorkerPanel.css";
+import WorkerInfoCard from "../components/worker/WorkerInfoCard";
+import ShiftControls from "../components/worker/ShiftControls";
+import ActivityTimeline from "../components/worker/ActivityTimeline";
+import { useDoors, useMachines } from "../hooks/useIdentity";
+import AwardHistory from "../components/worker/AwardHistory";
+
+// Helper: Format milliseconds to readable work hours
+function formatWorkHours(ms: number): string {
+    const totalSeconds = Math.floor(ms / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return `${hours}s ${minutes}d ${seconds}sn`;
+}
+
+// Legacy local door entry helper removed (now on-chain)
+
+// Helper: Clear shift data from localStorage
+// legacy helper removed; on-chain shift state now authoritative
 
 function WorkerPanel() {
     const account = useCurrentAccount();
-    const { workerCard, loading: cardLoading } = useWorkerCard();
+    const { workerCard, loading: cardLoading, refetch: refetchWorkerCard } = useWorkerCard();
     const { executeTransaction, isLoading: txLoading } = useIdentityTransaction();
     const { events: doorEvents } = useIdentityEvents("DoorAccessEvent");
     const { events: machineEvents } = useIdentityEvents("MachineUsageEvent");
     const { events: clockEvents } = useIdentityEvents("ClockEvent");
     const { events: awardEvents } = useIdentityEvents("AwardEvent");
+    const { events: productionEvents } = useIdentityEvents("ProductionIncrementEvent");
+    const { events: statsEvents } = useIdentityEvents("StatsUpdateEvent");
 
     // Fetch award history from worker card
     const { awardHistory, totalAwardPoints } = useWorkerAwardHistory(workerCard?.id);
 
-    // Get door entries from localStorage
-    const [localDoorEntries, setLocalDoorEntries] = useState<any[]>([]);
-
-    useEffect(() => {
-        const loadDoorEntries = () => {
-            const entries = JSON.parse(localStorage.getItem("doorEntries") || "[]");
-            setLocalDoorEntries(entries);
-        };
-
-        loadDoorEntries();
-        // Refresh every second to show updates
-        const interval = setInterval(loadDoorEntries, 1000);
-        return () => clearInterval(interval);
-    }, []);
-
-    // Combine blockchain events and local entries
-    const allDoorEvents = [...doorEvents, ...localDoorEntries];
+    const { doors } = useDoors();
+    const { machines } = useMachines();
+    const [selectedDoorId, setSelectedDoorId] = useState<number>(() => (doors.length > 0 ? doors[0].door_id : 0));
+    const [selectedMachineId, setSelectedMachineId] = useState<number>(() => (machines.length > 0 ? machines[0].machine_id : 0));
+    const [machineUsageProductionCount, setMachineUsageProductionCount] = useState<number>(0);
+    const [machineUsageEfficiency, setMachineUsageEfficiency] = useState<number>(90);
+    const [machineUsageMinutes, setMachineUsageMinutes] = useState<number>(0);
+    const [machineUsageSeconds, setMachineUsageSeconds] = useState<number>(0);
 
     const [showSuccess, setShowSuccess] = useState(false);
     const [activeTab, setActiveTab] = useState<"info" | "activity" | "awards">("info");
-    const [shiftActive, setShiftActive] = useState(() => {
-        const saved = localStorage.getItem("shiftActive");
-        return saved === "true";
-    });
-    const [localProductionCount, setLocalProductionCount] = useState(() => {
-        const saved = localStorage.getItem("localProductionCount");
-        return saved ? parseInt(saved, 10) : 0;
-    });
-    const [shiftStartTime, setShiftStartTime] = useState<number | null>(() => {
-        const saved = localStorage.getItem("shiftStartTime");
-        return saved ? parseInt(saved, 10) : null;
-    });
+    // Shift derived from on-chain state
+    const derivedShiftActive = Boolean(workerCard?.is_in_shift);
+    const shiftStartMs = workerCard?.current_shift_start_ms || 0;
     const [currentWorkTime, setCurrentWorkTime] = useState(0);
+    const [productionUnits, setProductionUnits] = useState(1);
+    const [efficiencyPercentage, setEfficiencyPercentage] = useState(90);
 
     // Live work time counter
     useEffect(() => {
         let interval: number | null = null;
-
-        if (shiftActive && shiftStartTime) {
+        if (derivedShiftActive && shiftStartMs > 0) {
             interval = window.setInterval(() => {
-                const elapsed = Date.now() - shiftStartTime;
-                setCurrentWorkTime(elapsed);
-            }, 1000); // Update every second
+                const now = Date.now();
+                // shiftStartMs is chain timestamp (ms); elapsed is now - shiftStartMs
+                const elapsed = now - shiftStartMs;
+                if (elapsed >= 0) setCurrentWorkTime(elapsed);
+            }, 1000);
+        } else {
+            setCurrentWorkTime(0);
         }
-
         return () => {
             if (interval) clearInterval(interval);
         };
-    }, [shiftActive, shiftStartTime]);
+    }, [derivedShiftActive, shiftStartMs]);
 
-    // Persist shift state to localStorage
+    // auto refetch worker card after each relevant event (simple poll)
     useEffect(() => {
-        localStorage.setItem("shiftActive", String(shiftActive));
-    }, [shiftActive]);
-
-    useEffect(() => {
-        if (shiftStartTime !== null) {
-            localStorage.setItem("shiftStartTime", String(shiftStartTime));
-        } else {
-            localStorage.removeItem("shiftStartTime");
-        }
-    }, [shiftStartTime]);
-
-    useEffect(() => {
-        localStorage.setItem("localProductionCount", String(localProductionCount));
-    }, [localProductionCount]);
+        const interval = setInterval(() => {
+            refetchWorkerCard();
+        }, 6000);
+        return () => clearInterval(interval);
+    }, [refetchWorkerCard]);
 
     if (!account) {
         return (
@@ -139,96 +137,101 @@ function WorkerPanel() {
     }
 
     const handleClockIn = async () => {
-        // Prevent starting a new shift if one is already active
-        if (shiftActive) {
-            alert("⚠️ A shift is already active! Please end your current shift first.");
+        if (derivedShiftActive) {
+            alert("⚠️ A shift is already active on-chain. End it first.");
             return;
         }
-
         const tx = buildClockInOutTx(workerCard.id, CONTRACT_CONFIG.SYSTEM_REGISTRY_ID, ACTION_TYPES.CLOCK_IN);
         executeTransaction(tx, {
             onSuccess: () => {
                 setShowSuccess(true);
-                // enable local production counting when clock-in succeeds
-                const startTime = Date.now();
-                setShiftActive(true);
-                setLocalProductionCount(0);
-                setShiftStartTime(startTime);
-                setCurrentWorkTime(0);
+                refetchWorkerCard();
                 setTimeout(() => setShowSuccess(false), 3000);
             },
         });
     };
 
     const handleClockOut = async () => {
-        if (!shiftActive) {
-            alert("⚠️ No active shift found!");
+        if (!derivedShiftActive) {
+            alert("⚠️ No active on-chain shift found.");
             return;
         }
-
         const tx = buildClockInOutTx(workerCard.id, CONTRACT_CONFIG.SYSTEM_REGISTRY_ID, ACTION_TYPES.CLOCK_OUT);
         executeTransaction(tx, {
             onSuccess: () => {
                 setShowSuccess(true);
-                // disable local production counting on clock-out
-                setShiftActive(false);
-                setShiftStartTime(null);
-                setCurrentWorkTime(0);
-                localStorage.removeItem("shiftActive");
-                localStorage.removeItem("shiftStartTime");
-                localStorage.removeItem("localProductionCount");
+                refetchWorkerCard();
                 setTimeout(() => setShowSuccess(false), 3000);
             },
         });
     };
 
-    const handleIncreaseProduction = () => {
-        if (!shiftActive) return;
-        setLocalProductionCount((c) => c + 1);
+    const handleIncrementProduction = () => {
+        if (!derivedShiftActive) {
+            alert("⚠️ Start a shift before recording production.");
+            return;
+        }
+        const tx = buildIncrementProductionTx(workerCard.id, CONTRACT_CONFIG.SYSTEM_REGISTRY_ID, productionUnits, efficiencyPercentage);
+        executeTransaction(tx, {
+            onSuccess: () => {
+                setShowSuccess(true);
+                refetchWorkerCard();
+                // simple UX reset
+                setProductionUnits(1);
+                setTimeout(() => setShowSuccess(false), 3000);
+            },
+        });
     };
 
     const handleDoorEntry = async () => {
-        // Save to localStorage instead of blockchain
-        const entry = {
-            worker_address: account.address,
-            door_id: 0,
-            door_name: "Main Entrance",
-            timestamp: Date.now(),
-            is_entry: true,
-        };
-
-        const existingEntries = JSON.parse(localStorage.getItem("doorEntries") || "[]");
-        existingEntries.unshift(entry);
-        localStorage.setItem("doorEntries", JSON.stringify(existingEntries.slice(0, 50)));
-
-        setShowSuccess(true);
-        setTimeout(() => setShowSuccess(false), 3000);
+        if (!workerCard) return;
+        const tx = buildRecordDoorAccessTx(workerCard.id, selectedDoorId, 2); // 2 = entry
+        executeTransaction(tx, {
+            onSuccess: () => {
+                setShowSuccess(true);
+                setTimeout(() => setShowSuccess(false), 3000);
+            },
+        });
     };
 
     const handleDoorExit = async () => {
-        // Save to localStorage instead of blockchain
-        const exit = {
-            worker_address: account.address,
-            door_id: 0,
-            door_name: "Main Entrance",
-            timestamp: Date.now(),
-            is_entry: false,
-        };
-
-        const existingEntries = JSON.parse(localStorage.getItem("doorEntries") || "[]");
-        existingEntries.unshift(exit);
-        localStorage.setItem("doorEntries", JSON.stringify(existingEntries.slice(0, 50)));
-
-        setShowSuccess(true);
-        setTimeout(() => setShowSuccess(false), 3000);
+        if (!workerCard) return;
+        const tx = buildRecordDoorAccessTx(workerCard.id, selectedDoorId, 3); // 3 = exit
+        executeTransaction(tx, {
+            onSuccess: () => {
+                setShowSuccess(true);
+                setTimeout(() => setShowSuccess(false), 3000);
+            },
+        });
     };
 
-    const formatWorkHours = (ms: number) => {
-        const totalSeconds = Math.floor(ms / 1000);
-        const hours = Math.floor(totalSeconds / 3600);
-        const minutes = Math.floor((totalSeconds % 3600) / 60);
-        const seconds = totalSeconds % 60;
-        return `${hours}s ${minutes}d ${seconds}sn`;
+    const handleRecordMachineUsage = () => {
+        if (!workerCard) return;
+        if (!derivedShiftActive) {
+            alert("⚠️ Start an active shift before machine usage.");
+            return;
+        }
+        const durationMs = machineUsageMinutes * 60000 + machineUsageSeconds * 1000;
+        if (durationMs <= 0) {
+            alert("⚠️ Duration must be > 0 ms");
+            return;
+        }
+        const tx = buildRecordMachineUsageTx(workerCard.id, {
+            machine_id: selectedMachineId,
+            usage_duration_ms: durationMs,
+            production_count: machineUsageProductionCount,
+            efficiency_percentage: machineUsageEfficiency,
+        });
+        executeTransaction(tx, {
+            onSuccess: () => {
+                setShowSuccess(true);
+                refetchWorkerCard();
+                setMachineUsageProductionCount(0);
+                setMachineUsageMinutes(0);
+                setMachineUsageSeconds(0);
+                setTimeout(() => setShowSuccess(false), 3000);
+            },
+        });
     };
 
     return (
@@ -240,36 +243,97 @@ function WorkerPanel() {
                         {workerCard.name} - {workerCard.department}
                     </p>
                 </div>
-                <div className="quick-actions">
-                    <button
-                        className="clock-btn clock-in"
-                        onClick={handleClockIn}
-                        disabled={txLoading || shiftActive}
-                        title={shiftActive ? "A shift is already active" : "Start shift"}
-                    >
-                        🕐 Start Shift
-                    </button>
-                    <button
-                        className="clock-btn clock-out"
-                        onClick={handleClockOut}
-                        disabled={txLoading || !shiftActive}
-                        title={!shiftActive ? "No active shift" : "End shift"}
-                    >
-                        🕐 End Shift
-                    </button>
-                    <button className="prod-btn" onClick={handleIncreaseProduction} disabled={!shiftActive || txLoading}>
-                        ➕ Add Product
-                    </button>
-                    <button className="door-btn door-entry" onClick={handleDoorEntry}>
-                        🚪 Entry
-                    </button>
-                    <button className="door-btn door-exit" onClick={handleDoorExit}>
-                        🚪 Exit
-                    </button>
-                </div>
+                <ShiftControls
+                    onClockIn={handleClockIn}
+                    onClockOut={handleClockOut}
+                    productionUnits={productionUnits}
+                    efficiencyPercentage={efficiencyPercentage}
+                    onChangeProductionUnits={setProductionUnits}
+                    onChangeEfficiency={setEfficiencyPercentage}
+                    onIncrementProduction={handleIncrementProduction}
+                    txLoading={txLoading}
+                    shiftActive={derivedShiftActive}
+                />
+            </div>
+
+            <div className="door-access-panel">
+                <h2>🚪 Door Access</h2>
+                {doors.length === 0 ? (
+                    <p className="no-data">No doors registered</p>
+                ) : (
+                    <div className="door-access-controls">
+                        <select value={selectedDoorId} onChange={(e) => setSelectedDoorId(Number(e.target.value))}>
+                            {doors.map((d) => (
+                                <option key={d.door_id} value={d.door_id}>
+                                    #{d.door_id} - {d.name}
+                                </option>
+                            ))}
+                        </select>
+                        <button onClick={handleDoorEntry} disabled={txLoading}>
+                            Entry
+                        </button>
+                        <button onClick={handleDoorExit} disabled={txLoading}>
+                            Exit
+                        </button>
+                    </div>
+                )}
             </div>
 
             {showSuccess && <div className="success-banner">✓ Transaction successfully recorded!</div>}
+
+            <div className="machine-usage-panel">
+                <h2>⚙️ Machine Usage</h2>
+                {machines.length === 0 ? (
+                    <p className="no-data">No machines registered</p>
+                ) : (
+                    <div className="machine-usage-controls">
+                        <select value={selectedMachineId} onChange={(e) => setSelectedMachineId(Number(e.target.value))}>
+                            {machines.map((m) => (
+                                <option key={m.machine_id} value={m.machine_id}>
+                                    #{m.machine_id} - {m.name}
+                                </option>
+                            ))}
+                        </select>
+                        <input
+                            type="number"
+                            min={0}
+                            placeholder="Min"
+                            value={machineUsageMinutes}
+                            onChange={(e) => setMachineUsageMinutes(Number(e.target.value))}
+                        />
+                        <input
+                            type="number"
+                            min={0}
+                            max={59}
+                            placeholder="Sec"
+                            value={machineUsageSeconds}
+                            onChange={(e) => setMachineUsageSeconds(Number(e.target.value))}
+                        />
+                        <input
+                            type="number"
+                            min={0}
+                            placeholder="Production units"
+                            value={machineUsageProductionCount}
+                            onChange={(e) => setMachineUsageProductionCount(Number(e.target.value))}
+                        />
+                        <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            placeholder="Eff%"
+                            value={machineUsageEfficiency}
+                            onChange={(e) => setMachineUsageEfficiency(Number(e.target.value))}
+                        />
+                        <button
+                            onClick={handleRecordMachineUsage}
+                            disabled={txLoading || machineUsageMinutes * 60000 + machineUsageSeconds * 1000 <= 0}
+                            title={machineUsageMinutes * 60000 + machineUsageSeconds * 1000 <= 0 ? "Duration required" : "Record usage"}
+                        >
+                            Kaydet
+                        </button>
+                    </div>
+                )}
+            </div>
 
             <div className="worker-tabs">
                 <button className={activeTab === "info" ? "tab-active" : ""} onClick={() => setActiveTab("info")}>
@@ -285,240 +349,25 @@ function WorkerPanel() {
 
             <div className="worker-content">
                 {activeTab === "info" && (
-                    <div className="info-grid">
-                        <div className="info-card">
-                            <h3>👤 Personal Information</h3>
-                            <div className="info-row">
-                                <span className="label">Card No:</span>
-                                <span className="value">{workerCard.card_number}</span>
-                            </div>
-                            <div className="info-row">
-                                <span className="label">Full Name:</span>
-                                <span className="value">{workerCard.name}</span>
-                            </div>
-                            <div className="info-row">
-                                <span className="label">Department:</span>
-                                <span className="value">{workerCard.department}</span>
-                            </div>
-                            <div className="info-row">
-                                <span className="label">Address:</span>
-                                <span className="value address">
-                                    {workerCard.worker_address.slice(0, 8)}...{workerCard.worker_address.slice(-6)}
-                                </span>
-                            </div>
-                        </div>
-
-                        <div className="info-card">
-                            <h3>📊 Statistics</h3>
-                            <div className="stat-box">
-                                <span className="stat-icon">🕐</span>
-                                <div className="stat-details">
-                                    <span className="stat-label">Total Working Hours</span>
-                                    <span className="stat-value">
-                                        {shiftActive ? formatWorkHours(currentWorkTime) : formatWorkHours(workerCard.total_work_hours)}
-                                    </span>
-                                    {shiftActive && <div className="stat-small live-indicator">🔴 Live - Shift Active</div>}
-                                </div>
-                            </div>
-                            <div className="stat-box">
-                                <span className="stat-icon">📦</span>
-                                <div className="stat-details">
-                                    <span className="stat-label">Total Production</span>
-                                    <span className="stat-value">{workerCard.total_production} items</span>
-                                    {localProductionCount > 0 && <div className="stat-small">Session additions: {localProductionCount} items</div>}
-                                </div>
-                            </div>
-                            <div className="stat-box">
-                                <span className="stat-icon">⚡</span>
-                                <div className="stat-details">
-                                    <span className="stat-label">Efficiency Score</span>
-                                    <span className="stat-value">{workerCard.efficiency_score}%</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <WorkerInfoCard
+                        workerCard={workerCard}
+                        shiftActive={derivedShiftActive}
+                        currentWorkTime={currentWorkTime}
+                        formatWorkHours={formatWorkHours}
+                    />
                 )}
 
                 {activeTab === "activity" && (
-                    <div className="activity-section">
-                        <div className="activity-card">
-                            <h3>🚪 Door Access</h3>
-                            <div className="activity-list">
-                                {allDoorEvents.length === 0 ? (
-                                    <p className="no-data">No door access records yet</p>
-                                ) : (
-                                    allDoorEvents.slice(0, 10).map((event, i) => {
-                                        // Check if it's a localStorage entry or blockchain event
-                                        const isLocalEntry = !event.parsedJson;
-                                        const data = isLocalEntry ? event : (event.parsedJson as any);
-
-                                        // Decode door_name safely
-                                        let doorName = "Unknown Door";
-                                        try {
-                                            if (data.door_name) {
-                                                doorName =
-                                                    typeof data.door_name === "string"
-                                                        ? data.door_name
-                                                        : new TextDecoder().decode(new Uint8Array(data.door_name));
-                                            }
-                                        } catch (e) {
-                                            doorName = `Door ${data.door_id || 0}`;
-                                        }
-
-                                        const timestamp = isLocalEntry ? data.timestamp : Number(data.timestamp);
-                                        const isEntry = data.is_entry;
-
-                                        return (
-                                            <div key={`door-${i}-${timestamp}`} className="activity-item">
-                                                <span className="activity-icon">{isEntry ? "➡️" : "⬅️"}</span>
-                                                <div className="activity-details">
-                                                    <span className="activity-title">{doorName}</span>
-                                                    <span className="activity-time">{new Date(timestamp).toLocaleString("tr-TR")}</span>
-                                                </div>
-                                                <span className={`activity-badge ${isEntry ? "entry" : "exit"}`}>{isEntry ? "Entry" : "Exit"}</span>
-                                            </div>
-                                        );
-                                    })
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="activity-card">
-                            <h3>⚙️ Machine Usage</h3>
-                            <div className="activity-list">
-                                {machineEvents.length === 0 ? (
-                                    <p className="no-data">No machine usage records yet</p>
-                                ) : (
-                                    machineEvents.slice(0, 10).map((event, i) => {
-                                        const data = event.parsedJson as any;
-                                        // Decode machine_name safely
-                                        let machineName = "Unknown Machine";
-                                        try {
-                                            if (data.machine_name) {
-                                                machineName =
-                                                    typeof data.machine_name === "string"
-                                                        ? data.machine_name
-                                                        : new TextDecoder().decode(new Uint8Array(data.machine_name));
-                                            }
-                                        } catch (e) {
-                                            machineName = `Machine ${data.machine_id || 0}`;
-                                        }
-
-                                        return (
-                                            <div key={i} className="activity-item">
-                                                <span className="activity-icon">⚙️</span>
-                                                <div className="activity-details">
-                                                    <span className="activity-title">{machineName}</span>
-                                                    <span className="activity-subtitle">
-                                                        Production: {data.production_count || 0} | Efficiency: {data.efficiency_percentage || 0}%
-                                                    </span>
-                                                    <span className="activity-time">{new Date(Number(data.timestamp)).toLocaleString("tr-TR")}</span>
-                                                </div>
-                                            </div>
-                                        );
-                                    })
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="activity-card">
-                            <h3>🕐 Shift Records</h3>
-                            <div className="activity-list">
-                                {clockEvents.length === 0 ? (
-                                    <p className="no-data">No shift records yet</p>
-                                ) : (
-                                    clockEvents.slice(0, 10).map((event, i) => {
-                                        const data = event.parsedJson as any;
-                                        const isClockIn = data.action_type === 0 || data.action_type === "0";
-
-                                        return (
-                                            <div key={i} className="activity-item">
-                                                <span className="activity-icon">{isClockIn ? "🕐" : "🏁"}</span>
-                                                <div className="activity-details">
-                                                    <span className="activity-title">{isClockIn ? "Shift Start" : "Shift End"}</span>
-                                                    <span className="activity-time">{new Date(Number(data.timestamp)).toLocaleString("tr-TR")}</span>
-                                                </div>
-                                            </div>
-                                        );
-                                    })
-                                )}
-                            </div>
-                        </div>
-                    </div>
+                    <ActivityTimeline
+                        doorEvents={doorEvents as any}
+                        machineEvents={machineEvents as any}
+                        clockEvents={clockEvents as any}
+                        productionEvents={productionEvents as any}
+                        statsEvents={statsEvents as any}
+                    />
                 )}
 
-                {activeTab === "awards" && (
-                    <div className="tab-content">
-                        <div className="award-summary">
-                            <div className="award-stats">
-                                <div className="stat-card">
-                                    <span className="stat-label">Total Points</span>
-                                    <span className="stat-value">{totalAwardPoints}</span>
-                                </div>
-                                <div className="stat-card">
-                                    <span className="stat-label">Awards Received</span>
-                                    <span className="stat-value">{awardHistory.length}</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="activity-card">
-                            <h3>🏆 Award History</h3>
-                            <div className="activity-list">
-                                {awardHistory.length === 0 ? (
-                                    <p className="no-data">No awards yet. Keep up the good work! 💪</p>
-                                ) : (
-                                    awardHistory.map((award: any, i: number) => {
-                                        const awardType =
-                                            typeof award.award_type === "string"
-                                                ? award.award_type
-                                                : new TextDecoder().decode(new Uint8Array(award.award_type));
-                                        const description =
-                                            typeof award.description === "string"
-                                                ? award.description
-                                                : new TextDecoder().decode(new Uint8Array(award.description));
-
-                                        return (
-                                            <div key={i} className="award-item">
-                                                <div className="award-icon">🏅</div>
-                                                <div className="award-details">
-                                                    <span className="award-type">{awardType}</span>
-                                                    <span className="award-description">{description}</span>
-                                                    <span className="award-date">{new Date(Number(award.timestamp_ms)).toLocaleString("tr-TR")}</span>
-                                                </div>
-                                                <span className="award-points">+{award.points}</span>
-                                            </div>
-                                        );
-                                    })
-                                )}
-                            </div>
-                        </div>
-
-                        {awardEvents.length > 0 && (
-                            <div className="activity-card">
-                                <h3>📢 Recent Award Events</h3>
-                                <div className="activity-list">
-                                    {awardEvents.slice(0, 10).map((event, i) => {
-                                        const data = event.parsedJson as any;
-                                        const awardType =
-                                            typeof data.award_type === "string" ? data.award_type : new TextDecoder().decode(new Uint8Array(data.award_type));
-
-                                        return (
-                                            <div key={i} className="activity-item">
-                                                <span className="activity-icon">🎁</span>
-                                                <div className="activity-details">
-                                                    <span className="activity-title">{awardType}</span>
-                                                    <span className="activity-subtitle">Points: {data.points}</span>
-                                                    <span className="activity-time">{new Date(Number(data.timestamp_ms)).toLocaleString("tr-TR")}</span>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                )}
+                {activeTab === "awards" && <AwardHistory totalAwardPoints={totalAwardPoints} awardHistory={awardHistory as any} recentAwards={awardEvents} />}
             </div>
         </div>
     );

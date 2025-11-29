@@ -19,11 +19,33 @@ import {
     buildUpdateWorkerCardTx,
     buildDeactivateWorkerCardTx,
     buildActivateWorkerCardTx,
-    buildAddNewAdminTx,
 } from "../utils/transactions";
 import { isContractConfigured } from "../config/contracts";
 import SuiConnectButton from "../components/SuiConnectButton";
+import WorkerCardForm from "../components/admin/WorkerCardForm";
+import DoorRegistrationForm from "../components/admin/DoorRegistrationForm";
+import MachineRegistrationForm from "../components/admin/MachineRegistrationForm";
+import AwardIssuanceForm from "../components/admin/AwardIssuanceForm";
+import WorkerManagementForm from "../components/admin/WorkerManagementForm";
+import DoorList from "../components/admin/DoorList";
+import MachineList from "../components/admin/MachineList";
 import "../styles/AdminPanel.css";
+
+// Helper: Validate Sui address format
+function isValidSuiAddress(address: string): boolean {
+    return address.startsWith("0x") && address.length >= 10;
+}
+
+// Helper: Show success notification
+function showSuccessNotification(setter: (value: boolean) => void, duration = 3000) {
+    setter(true);
+    setTimeout(() => setter(false), duration);
+}
+
+// Helper: Reset form state
+function resetForm<T extends Record<string, string>>(setter: (value: T) => void, initialState: T) {
+    setter(initialState);
+}
 
 function AdminPanel() {
     const account = useCurrentAccount();
@@ -59,10 +81,6 @@ function AdminPanel() {
         worker_card_id: "",
     });
 
-    const [transferAdminForm, setTransferAdminForm] = useState({
-        new_admin_address: "",
-    });
-
     const [doorForm, setDoorForm] = useState({
         name: "",
         location: "",
@@ -71,6 +89,7 @@ function AdminPanel() {
     const [machineForm, setMachineForm] = useState({
         name: "",
         machine_type: "",
+        location: "",
     });
 
     const [awardForm, setAwardForm] = useState({
@@ -140,36 +159,24 @@ function AdminPanel() {
 
     const handleIssueWorkerCard = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("🚀 Worker Card Form Submitted");
-        console.log("Admin Cap ID:", adminCapId);
-        console.log("Form Data:", workerForm);
 
         if (!adminCapId) {
             alert("⚠️ Admin capability not found");
             return;
         }
 
-        // Validate address format
-        if (!workerForm.worker_address.startsWith("0x") || workerForm.worker_address.length < 10) {
+        if (!isValidSuiAddress(workerForm.worker_address)) {
             alert("⚠️ Invalid Sui address format");
             return;
         }
 
         try {
-            console.log("📝 Building transaction...");
             const tx = buildIssueWorkerCardTx(adminCapId, workerForm);
-            console.log("✅ Transaction built successfully:", tx);
 
-            console.log("🚀 Executing transaction...");
             executeTransaction(tx, {
                 onSuccess: () => {
-                    console.log("✅ Transaction executed successfully!");
-                    setShowSuccess(true);
-                    setWorkerForm({ worker_address: "", card_number: "", name: "", department: "" });
-                    setTimeout(() => setShowSuccess(false), 3000);
-                },
-                onError: (error) => {
-                    console.error("❌ Worker card creation failed:", error);
+                    showSuccessNotification(setShowSuccess);
+                    resetForm(setWorkerForm, { worker_address: "", card_number: "", name: "", department: "" });
                 },
             });
         } catch (error) {
@@ -180,9 +187,6 @@ function AdminPanel() {
 
     const handleRegisterDoor = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("🚪 Door Form Submitted");
-        console.log("Admin Cap ID:", adminCapId);
-        console.log("Form Data:", doorForm);
 
         if (!adminCapId) {
             alert("⚠️ Admin capability not found");
@@ -190,20 +194,12 @@ function AdminPanel() {
         }
 
         try {
-            console.log("📝 Building transaction...");
             const tx = buildRegisterDoorTx(adminCapId, doorForm);
-            console.log("✅ Transaction built successfully:", tx);
 
-            console.log("🚀 Executing transaction...");
             executeTransaction(tx, {
                 onSuccess: () => {
-                    console.log("✅ Door registered successfully!");
-                    setShowSuccess(true);
-                    setDoorForm({ name: "", location: "" });
-                    setTimeout(() => setShowSuccess(false), 3000);
-                },
-                onError: (error) => {
-                    console.error("❌ Door registration failed:", error);
+                    showSuccessNotification(setShowSuccess);
+                    resetForm(setDoorForm, { name: "", location: "" });
                 },
             });
         } catch (error) {
@@ -214,9 +210,6 @@ function AdminPanel() {
 
     const handleRegisterMachine = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("⚙️ Machine Form Submitted");
-        console.log("Admin Cap ID:", adminCapId);
-        console.log("Form Data:", machineForm);
 
         if (!adminCapId) {
             alert("⚠️ Admin capability not found");
@@ -224,20 +217,12 @@ function AdminPanel() {
         }
 
         try {
-            console.log("📝 Building transaction...");
             const tx = buildRegisterMachineTx(adminCapId, machineForm);
-            console.log("✅ Transaction built successfully:", tx);
 
-            console.log("🚀 Executing transaction...");
             executeTransaction(tx, {
                 onSuccess: () => {
-                    console.log("✅ Machine registered successfully!");
-                    setShowSuccess(true);
-                    setMachineForm({ name: "", machine_type: "" });
-                    setTimeout(() => setShowSuccess(false), 3000);
-                },
-                onError: (error) => {
-                    console.error("❌ Machine registration failed:", error);
+                    showSuccessNotification(setShowSuccess);
+                    resetForm(setMachineForm, { name: "", machine_type: "", location: "" });
                 },
             });
         } catch (error) {
@@ -258,9 +243,8 @@ function AdminPanel() {
 
         executeTransaction(tx, {
             onSuccess: () => {
-                setShowSuccess(true);
-                setAwardForm({ worker_card_id: "", award_type: "", points: "", description: "" });
-                setTimeout(() => setShowSuccess(false), 3000);
+                showSuccessNotification(setShowSuccess);
+                resetForm(setAwardForm, { worker_card_id: "", award_type: "", points: "", description: "" });
             },
         });
     };
@@ -276,15 +260,10 @@ function AdminPanel() {
 
         executeTransaction(tx, {
             onSuccess: () => {
-                setShowSuccess(true);
-                setUpdateWorkerForm({ worker_card_id: "", name: "", department: "" });
-                setTimeout(() => setShowSuccess(false), 3000);
+                showSuccessNotification(setShowSuccess);
+                resetForm(setUpdateWorkerForm, { worker_card_id: "", name: "", department: "" });
             },
         });
-    };
-
-    const handleCardStatusChange = (e: React.FormEvent) => {
-        e.preventDefault();
     };
 
     const handleDeactivateCard = async () => {
@@ -293,10 +272,7 @@ function AdminPanel() {
         const tx = buildDeactivateWorkerCardTx(adminCapId, cardManagementForm.worker_card_id);
 
         executeTransaction(tx, {
-            onSuccess: () => {
-                setShowSuccess(true);
-                setTimeout(() => setShowSuccess(false), 3000);
-            },
+            onSuccess: () => showSuccessNotification(setShowSuccess),
         });
     };
 
@@ -306,31 +282,11 @@ function AdminPanel() {
         const tx = buildActivateWorkerCardTx(adminCapId, cardManagementForm.worker_card_id);
 
         executeTransaction(tx, {
-            onSuccess: () => {
-                setShowSuccess(true);
-                setTimeout(() => setShowSuccess(false), 3000);
-            },
+            onSuccess: () => showSuccessNotification(setShowSuccess),
         });
     };
 
-    const handleTransferAdmin = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!adminCapId) return;
-
-        const confirmation = window.confirm("⚠️ WARNING: A new AdminCap will be created for this address. Do you want to continue?");
-
-        if (!confirmation) return;
-
-        const tx = buildAddNewAdminTx(adminCapId, transferAdminForm.new_admin_address);
-
-        executeTransaction(tx, {
-            onSuccess: () => {
-                setShowSuccess(true);
-                setTransferAdminForm({ new_admin_address: "" });
-                setTimeout(() => setShowSuccess(false), 3000);
-            },
-        });
-    };
+    // Integrated via AdminTransferForm component
 
     return (
         <div className="admin-container">
@@ -371,321 +327,38 @@ function AdminPanel() {
 
             <div className="admin-content">
                 {activeTab === "workers" && (
-                    <div className="admin-form-card">
-                        <h2>Create New Worker Card</h2>
-                        <form onSubmit={handleIssueWorkerCard}>
-                            <div className="form-group">
-                                <label>Worker Address (Sui Address)</label>
-                                <input
-                                    type="text"
-                                    placeholder="0x..."
-                                    value={workerForm.worker_address}
-                                    onChange={(e) => setWorkerForm({ ...workerForm, worker_address: e.target.value })}
-                                    required
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>Card Number</label>
-                                <input
-                                    type="text"
-                                    placeholder="CARD-1001"
-                                    value={workerForm.card_number}
-                                    onChange={(e) => setWorkerForm({ ...workerForm, card_number: e.target.value })}
-                                    required
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>Full Name</label>
-                                <input
-                                    type="text"
-                                    placeholder="John Doe"
-                                    value={workerForm.name}
-                                    onChange={(e) => setWorkerForm({ ...workerForm, name: e.target.value })}
-                                    required
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>Department</label>
-                                <input
-                                    type="text"
-                                    placeholder="Production"
-                                    value={workerForm.department}
-                                    onChange={(e) => setWorkerForm({ ...workerForm, department: e.target.value })}
-                                    required
-                                />
-                            </div>
-                            <button type="submit" className="submit-btn" disabled={txLoading}>
-                                {txLoading ? "Processing..." : "Create Card"}
-                            </button>
-                        </form>
-                    </div>
+                    <WorkerCardForm values={workerForm} loading={txLoading} onChange={setWorkerForm} onSubmit={handleIssueWorkerCard} />
                 )}
 
                 {activeTab === "doors" && (
                     <>
-                        <div className="admin-form-card">
-                            <h2>Add New Door</h2>
-                            <form onSubmit={handleRegisterDoor}>
-                                <div className="form-group">
-                                    <label>Door Name</label>
-                                    <input
-                                        type="text"
-                                        placeholder="Main Entrance Door"
-                                        value={doorForm.name}
-                                        onChange={(e) => setDoorForm({ ...doorForm, name: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label>Location</label>
-                                    <input
-                                        type="text"
-                                        placeholder="Ground Floor - Entrance"
-                                        value={doorForm.location}
-                                        onChange={(e) => setDoorForm({ ...doorForm, location: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                                <button type="submit" className="submit-btn" disabled={txLoading}>
-                                    {txLoading ? "Processing..." : "Add Door"}
-                                </button>
-                            </form>
-                        </div>
+                        <DoorRegistrationForm values={doorForm} loading={txLoading} onChange={setDoorForm} onSubmit={handleRegisterDoor} />
 
-                        <div className="admin-form-card">
-                            <h2>Registered Doors ({doors.length})</h2>
-                            {doorsLoading ? (
-                                <p className="loading-text">Loading doors...</p>
-                            ) : doors.length === 0 ? (
-                                <p className="no-data">No doors registered yet</p>
-                            ) : (
-                                <div className="list-container">
-                                    {doors.map((door) => (
-                                        <div key={door.door_id} className={`list-item ${!door.is_active ? "inactive" : ""}`}>
-                                            <div className="list-item-header">
-                                                <span className="door-icon">🚪</span>
-                                                <div className="list-item-info">
-                                                    <h3>{door.name}</h3>
-                                                    <p className="location">📍 {door.location}</p>
-                                                </div>
-                                                <span className={`status-badge ${door.is_active ? "active" : "inactive"}`}>
-                                                    {door.is_active ? "Active" : "Inactive"}
-                                                </span>
-                                            </div>
-                                            <div className="list-item-details">
-                                                <span className="detail-label">Door ID:</span>
-                                                <span className="detail-value">{door.door_id}</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+                        <DoorList doors={doors} loading={doorsLoading} />
                     </>
                 )}
 
                 {activeTab === "machines" && (
                     <>
-                        <div className="admin-form-card">
-                            <h2>Add New Machine/Resource</h2>
-                            <form onSubmit={handleRegisterMachine}>
-                                <div className="form-group">
-                                    <label>Machine Name</label>
-                                    <input
-                                        type="text"
-                                        placeholder="CNC-001"
-                                        value={machineForm.name}
-                                        onChange={(e) => setMachineForm({ ...machineForm, name: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label>Machine Type</label>
-                                    <input
-                                        type="text"
-                                        placeholder="CNC Lathe"
-                                        value={machineForm.machine_type}
-                                        onChange={(e) => setMachineForm({ ...machineForm, machine_type: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                                <button type="submit" className="submit-btn" disabled={txLoading}>
-                                    {txLoading ? "Processing..." : "Add Machine"}
-                                </button>
-                            </form>
-                        </div>
+                        <MachineRegistrationForm values={machineForm} loading={txLoading} onChange={setMachineForm} onSubmit={handleRegisterMachine} />
 
-                        <div className="admin-form-card">
-                            <h2>Registered Machines ({machines.length})</h2>
-                            {machinesLoading ? (
-                                <p className="loading-text">Loading machines...</p>
-                            ) : machines.length === 0 ? (
-                                <p className="no-data">No machines registered yet</p>
-                            ) : (
-                                <div className="list-container">
-                                    {machines.map((machine) => (
-                                        <div key={machine.machine_id} className={`list-item ${!machine.is_active ? "inactive" : ""}`}>
-                                            <div className="list-item-header">
-                                                <span className="door-icon">⚙️</span>
-                                                <div className="list-item-info">
-                                                    <h3>{machine.name}</h3>
-                                                    <p className="location">🔧 {machine.machine_type}</p>
-                                                </div>
-                                                <span className={`status-badge ${machine.is_active ? "active" : "inactive"}`}>
-                                                    {machine.is_active ? "Active" : "Inactive"}
-                                                </span>
-                                            </div>
-                                            <div className="list-item-details">
-                                                <span className="detail-label">Machine ID:</span>
-                                                <span className="detail-value">{machine.machine_id}</span>
-                                                <span className="detail-label">Total Production:</span>
-                                                <span className="detail-value">{machine.total_production || 0}</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+                        <MachineList machines={machines} loading={machinesLoading} />
                     </>
                 )}
 
-                {activeTab === "awards" && (
-                    <div className="admin-form-card">
-                        <h2>Give Award to Employee</h2>
-                        <form onSubmit={handleIssueAward}>
-                            <div className="form-group">
-                                <label>Worker Card ID</label>
-                                <input
-                                    type="text"
-                                    placeholder="0x..."
-                                    value={awardForm.worker_card_id}
-                                    onChange={(e) => setAwardForm({ ...awardForm, worker_card_id: e.target.value })}
-                                    required
-                                />
-                                <small>Employee's WorkerCard object ID</small>
-                            </div>
-                            <div className="form-group">
-                                <label>Award Type</label>
-                                <input
-                                    type="text"
-                                    placeholder="Employee of the Month"
-                                    value={awardForm.award_type}
-                                    onChange={(e) => setAwardForm({ ...awardForm, award_type: e.target.value })}
-                                    required
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>Points</label>
-                                <input
-                                    type="number"
-                                    placeholder="100"
-                                    value={awardForm.points}
-                                    onChange={(e) => setAwardForm({ ...awardForm, points: e.target.value })}
-                                    required
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>Description</label>
-                                <textarea
-                                    placeholder="Highest productivity performance"
-                                    value={awardForm.description}
-                                    onChange={(e) => setAwardForm({ ...awardForm, description: e.target.value })}
-                                    required
-                                    rows={3}
-                                />
-                            </div>
-                            <button type="submit" className="submit-btn" disabled={txLoading}>
-                                {txLoading ? "Processing..." : "Give Award"}
-                            </button>
-                        </form>
-                    </div>
-                )}
+                {activeTab === "awards" && <AwardIssuanceForm values={awardForm} loading={txLoading} onChange={setAwardForm} onSubmit={handleIssueAward} />}
 
                 {activeTab === "manage" && (
-                    <div className="manage-section">
-                        <div className="admin-form-card">
-                            <h2>Update Worker Card</h2>
-                            <form onSubmit={handleUpdateWorkerCard}>
-                                <div className="form-group">
-                                    <label>Worker Card ID</label>
-                                    <input
-                                        type="text"
-                                        placeholder="0x..."
-                                        value={updateWorkerForm.worker_card_id}
-                                        onChange={(e) => setUpdateWorkerForm({ ...updateWorkerForm, worker_card_id: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label>New Full Name</label>
-                                    <input
-                                        type="text"
-                                        placeholder="John Doe"
-                                        value={updateWorkerForm.name}
-                                        onChange={(e) => setUpdateWorkerForm({ ...updateWorkerForm, name: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label>New Department</label>
-                                    <input
-                                        type="text"
-                                        placeholder="Production"
-                                        value={updateWorkerForm.department}
-                                        onChange={(e) => setUpdateWorkerForm({ ...updateWorkerForm, department: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                                <button type="submit" className="submit-btn" disabled={txLoading}>
-                                    {txLoading ? "Processing..." : "Update"}
-                                </button>
-                            </form>
-                        </div>
-
-                        <div className="admin-form-card">
-                            <h2>Worker Card Status</h2>
-                            <form onSubmit={handleCardStatusChange}>
-                                <div className="form-group">
-                                    <label>Worker Card ID</label>
-                                    <input
-                                        type="text"
-                                        placeholder="0x..."
-                                        value={cardManagementForm.worker_card_id}
-                                        onChange={(e) => setCardManagementForm({ ...cardManagementForm, worker_card_id: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                                <div className="button-group">
-                                    <button type="button" className="submit-btn deactivate-btn" onClick={() => handleDeactivateCard()} disabled={txLoading}>
-                                        🚫 Deactivate
-                                    </button>
-                                    <button type="button" className="submit-btn activate-btn" onClick={() => handleActivateCard()} disabled={txLoading}>
-                                        ✅ Activate
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-
-                        <div className="admin-form-card">
-                            <h2>Create New Admin</h2>
-                            <form onSubmit={handleTransferAdmin}>
-                                <div className="form-group">
-                                    <label>New Admin Address</label>
-                                    <input
-                                        type="text"
-                                        placeholder="0x..."
-                                        value={transferAdminForm.new_admin_address}
-                                        onChange={(e) => setTransferAdminForm({ ...transferAdminForm, new_admin_address: e.target.value })}
-                                        required
-                                    />
-                                    <small>✓ A new AdminCap will be created for this address. Your admin permissions will remain intact.</small>
-                                </div>
-                                <button type="submit" className="submit-btn" disabled={txLoading}>
-                                    {txLoading ? "Processing..." : "Create New Admin"}
-                                </button>
-                            </form>
-                        </div>
-                    </div>
+                    <WorkerManagementForm
+                        updateValues={updateWorkerForm}
+                        statusValues={cardManagementForm}
+                        loading={txLoading}
+                        onUpdateChange={setUpdateWorkerForm}
+                        onStatusChange={setCardManagementForm}
+                        onUpdateSubmit={handleUpdateWorkerCard}
+                        onDeactivate={handleDeactivateCard}
+                        onActivate={handleActivateCard}
+                    />
                 )}
 
                 {activeTab === "analytics" && (
@@ -743,10 +416,15 @@ function AdminPanel() {
 
                                             return (
                                                 <div key={i} className="analytics-item">
-                                                    <span>{isEntry ? "➡️" : "⬅️"}</span>
+                                                    <span>{isEntry ? "➞️" : "⬅️"}</span>
                                                     <span>{doorName}</span>
                                                     <span className="time">
-                                                        {new Date(Number((eventData as { timestamp_ms?: number }).timestamp_ms)).toLocaleTimeString("tr-TR")}
+                                                        {(eventData as { timestamp_ms?: number }).timestamp_ms &&
+                                                        Number((eventData as { timestamp_ms?: number }).timestamp_ms) > 0
+                                                            ? new Date(Number((eventData as { timestamp_ms?: number }).timestamp_ms)).toLocaleTimeString(
+                                                                  "en-US"
+                                                              )
+                                                            : "Invalid Date"}
                                                     </span>
                                                 </div>
                                             );
@@ -773,7 +451,12 @@ function AdminPanel() {
                                                     <span>⚙️</span>
                                                     <span>{machineName}</span>
                                                     <span className="time">
-                                                        {new Date(Number((eventData as { timestamp_ms?: number }).timestamp_ms)).toLocaleTimeString("tr-TR")}
+                                                        {(eventData as { timestamp_ms?: number }).timestamp_ms &&
+                                                        Number((eventData as { timestamp_ms?: number }).timestamp_ms) > 0
+                                                            ? new Date(Number((eventData as { timestamp_ms?: number }).timestamp_ms)).toLocaleTimeString(
+                                                                  "en-US"
+                                                              )
+                                                            : "Invalid Date"}
                                                     </span>
                                                 </div>
                                             );
@@ -799,7 +482,12 @@ function AdminPanel() {
                                                     <span>{isClockIn ? "🕐" : "🏁"}</span>
                                                     <span>{isClockIn ? "Shift Start" : "Shift End"}</span>
                                                     <span className="time">
-                                                        {new Date(Number((eventData as { timestamp_ms?: number }).timestamp_ms)).toLocaleTimeString("tr-TR")}
+                                                        {(eventData as { timestamp_ms?: number }).timestamp_ms &&
+                                                        Number((eventData as { timestamp_ms?: number }).timestamp_ms) > 0
+                                                            ? new Date(Number((eventData as { timestamp_ms?: number }).timestamp_ms)).toLocaleTimeString(
+                                                                  "en-US"
+                                                              )
+                                                            : "Invalid Date"}
                                                     </span>
                                                 </div>
                                             );

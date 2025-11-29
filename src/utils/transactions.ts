@@ -81,6 +81,7 @@ export function buildRegisterMachineTx(adminCapId: string, form: RegisterMachine
             tx.object(CONTRACT_CONFIG.SYSTEM_REGISTRY_ID),
             tx.pure(bcs.vector(bcs.u8()).serialize(stringToBytes(form.name))),
             tx.pure(bcs.vector(bcs.u8()).serialize(stringToBytes(form.machine_type))),
+            tx.pure(bcs.vector(bcs.u8()).serialize(stringToBytes(form.location))),
         ],
     });
 
@@ -112,11 +113,12 @@ export function buildIssueAwardTx(adminCapId: string, workerCardId: string, form
 
 /**
  * Record a door access event
+ * accessType values must match Move constants: 2 = entry, 3 = exit
  */
 export function buildRecordDoorAccessTx(
     workerCardId: string,
     doorId: number,
-    accessType: number // 0 = entry, 1 = exit
+    accessType: number // 2 = entry, 3 = exit
 ): Transaction {
     const tx = new Transaction();
 
@@ -162,6 +164,20 @@ export function buildClockInOutTx(
     tx.moveCall({
         target: `${getModuleId()}::clock_in_out`,
         arguments: [tx.object(workerCardId), tx.object(registryId), tx.pure.u8(actionType)],
+    });
+
+    return tx;
+}
+
+/**
+ * Increment production (manual update outside machine usage)
+ */
+export function buildIncrementProductionTx(workerCardId: string, registryId: string, production_units: number, efficiency_percentage: number): Transaction {
+    const tx = new Transaction();
+
+    tx.moveCall({
+        target: `${getModuleId()}::increment_production`,
+        arguments: [tx.object(workerCardId), tx.object(registryId), tx.pure.u64(production_units), tx.pure.u64(efficiency_percentage)],
     });
 
     return tx;
@@ -280,6 +296,7 @@ export function buildUpdateMachineTx(adminCapId: string, machineId: number, form
             tx.pure.u64(machineId),
             tx.pure(bcs.vector(bcs.u8()).serialize(stringToBytes(form.name))),
             tx.pure(bcs.vector(bcs.u8()).serialize(stringToBytes(form.machine_type))),
+            tx.pure(bcs.vector(bcs.u8()).serialize(stringToBytes(form.location))),
         ],
     });
 
@@ -404,6 +421,7 @@ export function buildBatchRegisterMachinesTx(adminCapId: string, form: BatchRegi
 
     const names = form.names.map((name) => stringToBytes(name));
     const types = form.machine_types.map((type) => stringToBytes(type));
+    const locations = form.locations.map((loc) => stringToBytes(loc));
 
     tx.moveCall({
         target: `${getModuleId()}::batch_register_machines`,
@@ -412,6 +430,7 @@ export function buildBatchRegisterMachinesTx(adminCapId: string, form: BatchRegi
             tx.object(CONTRACT_CONFIG.SYSTEM_REGISTRY_ID),
             tx.pure(bcs.vector(bcs.vector(bcs.u8())).serialize(names)),
             tx.pure(bcs.vector(bcs.vector(bcs.u8())).serialize(types)),
+            tx.pure(bcs.vector(bcs.vector(bcs.u8())).serialize(locations)),
         ],
     });
 

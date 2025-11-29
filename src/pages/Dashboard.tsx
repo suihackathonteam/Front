@@ -3,6 +3,7 @@ import "../styles/Dashboard.css";
 import { useCurrentAccount, useSuiClient } from "@mysten/dapp-kit";
 import SuiConnectButton from "../components/SuiConnectButton";
 import { useIdentityEvents, useRecentDoorAccess, useRecentMachineUsage, useRecentShifts, useRecentAwards, useDoors, useMachines } from "../hooks/useIdentity";
+import type { EventData } from "../types/sui";
 import StatCard from "../components/dashboard/StatCard";
 import DoorAccessChart from "../components/dashboard/DoorAccessChart";
 import MachineUsageChart from "../components/dashboard/MachineUsageChart";
@@ -12,13 +13,18 @@ import DoorGrid from "../components/dashboard/DoorGrid";
 import MachineGrid from "../components/dashboard/MachineGrid";
 import LoadingSpinner from "../components/shared/LoadingSpinner";
 
+// Helper to check if event has necessary data
+function isValidEvent(event: unknown): event is EventData {
+    return typeof event === "object" && event !== null && "parsedJson" in event && typeof (event as EventData).parsedJson === "object";
+}
+
 function Dashboard() {
     const [selectedView, setSelectedView] = useState("overview");
     const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null);
     const currentAccount = useCurrentAccount();
     const client = useSuiClient();
 
-    const { events: allEvents, loading: eventsLoading } = useIdentityEvents();
+    const { events: allEvents, loading: eventsLoading } = useIdentityEvents("*");
 
     // Fetch global activity data from registry
     const { recentDoorAccess } = useRecentDoorAccess();
@@ -86,45 +92,46 @@ function Dashboard() {
 
         allEvents.forEach((event) => {
             try {
+                if (!isValidEvent(event) || !event.type) return;
                 const eventType = event.type.split("::").pop();
                 const parsedJson = event.parsedJson;
 
                 if (eventType === "DoorAccessEvent") {
                     doorEvents.push({
-                        worker_address: parsedJson.worker_address,
-                        card_number: parsedJson.card_number,
-                        door_id: Number(parsedJson.door_id),
-                        door_name: parsedJson.door_name,
-                        access_type: Number(parsedJson.access_type),
-                        timestamp: new Date(Number(parsedJson.timestamp_ms)),
-                        is_entry: Number(parsedJson.access_type) === 2, // 2 = entry, 3 = exit
+                        worker_address: String(parsedJson?.worker_address || ""),
+                        card_number: parsedJson?.card_number,
+                        door_id: Number(parsedJson?.door_id),
+                        door_name: parsedJson?.door_name,
+                        access_type: Number(parsedJson?.access_type),
+                        timestamp: new Date(Number(parsedJson?.timestamp_ms || 0)),
+                        is_entry: Number(parsedJson?.access_type) === 2, // 2 = entry, 3 = exit
                     });
                 } else if (eventType === "MachineUsageEvent") {
                     machineEvents.push({
-                        worker_address: parsedJson.worker_address,
-                        card_number: parsedJson.card_number,
-                        machine_id: Number(parsedJson.machine_id),
-                        machine_name: parsedJson.machine_name,
-                        timestamp: new Date(Number(parsedJson.timestamp_ms)),
-                        duration: Number(parsedJson.usage_duration_ms),
-                        production_count: Number(parsedJson.production_count),
-                        efficiency: Number(parsedJson.efficiency_percentage),
+                        worker_address: String(parsedJson?.worker_address || ""),
+                        card_number: parsedJson?.card_number,
+                        machine_id: Number(parsedJson?.machine_id),
+                        machine_name: parsedJson?.machine_name,
+                        timestamp: new Date(Number(parsedJson?.timestamp_ms || 0)),
+                        duration: Number(parsedJson?.usage_duration_ms),
+                        production_count: Number(parsedJson?.production_count),
+                        efficiency: Number(parsedJson?.efficiency_percentage),
                     });
                 } else if (eventType === "ClockEvent") {
                     clockEvents.push({
-                        worker_address: parsedJson.worker_address,
-                        card_number: parsedJson.card_number,
-                        timestamp: new Date(Number(parsedJson.timestamp_ms)),
-                        action_type: Number(parsedJson.action_type),
+                        worker_address: String(parsedJson?.worker_address || ""),
+                        card_number: parsedJson?.card_number,
+                        timestamp: new Date(Number(parsedJson?.timestamp_ms || 0)),
+                        action_type: Number(parsedJson?.action_type),
                     });
                 } else if (eventType === "AwardEvent") {
                     awardEvents.push({
-                        worker_address: parsedJson.worker_address,
-                        card_number: parsedJson.card_number,
-                        award_type: parsedJson.award_type,
-                        points: Number(parsedJson.points),
-                        description: parsedJson.description,
-                        timestamp: new Date(Number(parsedJson.timestamp_ms)),
+                        worker_address: String(parsedJson?.worker_address || ""),
+                        card_number: parsedJson?.card_number,
+                        award_type: parsedJson?.award_type,
+                        points: Number(parsedJson?.points),
+                        description: parsedJson?.description,
+                        timestamp: new Date(Number(parsedJson?.timestamp_ms || 0)),
                     });
                 }
             } catch (err) {
@@ -167,8 +174,9 @@ function Dashboard() {
                 // Process all events to build worker profiles
                 allEvents.forEach((event) => {
                     try {
+                        if (!isValidEvent(event)) return;
                         const parsedJson = event.parsedJson;
-                        const address = parsedJson.worker_address;
+                        const address = String(parsedJson?.worker_address || "");
 
                         if (!address) return;
 
@@ -176,7 +184,7 @@ function Dashboard() {
                             // Decode card_number and create initial profile
                             let cardNumber = "N/A";
                             try {
-                                if (parsedJson.card_number) {
+                                if (parsedJson?.card_number) {
                                     if (typeof parsedJson.card_number === "string") {
                                         cardNumber = parsedJson.card_number;
                                     } else if (Array.isArray(parsedJson.card_number)) {
@@ -206,11 +214,12 @@ function Dashboard() {
                         worker.event_count++;
 
                         // Update stats based on event type
+                        if (!isValidEvent(event) || !event.type) return;
                         const eventType = event.type.split("::").pop();
                         if (eventType === "MachineUsageEvent") {
-                            worker.total_work_hours += Number(parsedJson.usage_duration_ms || 0);
-                            worker.total_production += Number(parsedJson.production_count || 0);
-                            const efficiency = Number(parsedJson.efficiency_percentage || 0);
+                            worker.total_work_hours += Number(parsedJson?.usage_duration_ms || 0);
+                            worker.total_production += Number(parsedJson?.production_count || 0);
+                            const efficiency = Number(parsedJson?.efficiency_percentage || 0);
                             // Calculate weighted average efficiency
                             if (worker.efficiency_score === 0) {
                                 worker.efficiency_score = efficiency;
@@ -584,7 +593,7 @@ function Dashboard() {
                                     <div className="feed-card">
                                         <h3>🚪 Recent Door Access</h3>
                                         <div className="feed-list">
-                                            {recentDoorAccess.slice(0, 15).map((event: Record<string, unknown>, i: number) => {
+                                            {recentDoorAccess.slice(0, 15).map((event, i: number) => {
                                                 const doorName =
                                                     typeof event.door_name === "string"
                                                         ? event.door_name
@@ -611,11 +620,11 @@ function Dashboard() {
                                     <div className="feed-card">
                                         <h3>⚙️ Recent Machine Usage</h3>
                                         <div className="feed-list">
-                                            {recentMachineUsage.slice(0, 15).map((event: Record<string, unknown>, i: number) => {
+                                            {recentMachineUsage.slice(0, 15).map((event, i: number) => {
                                                 const machineName =
                                                     typeof event.machine_name === "string"
                                                         ? event.machine_name
-                                                        : Array.isArray(event.machine_name) 
+                                                        : Array.isArray(event.machine_name)
                                                         ? new TextDecoder().decode(new Uint8Array(event.machine_name as number[]))
                                                         : "Unknown Machine";
 
@@ -625,7 +634,8 @@ function Dashboard() {
                                                         <div className="feed-info">
                                                             <span className="feed-title">{machineName}</span>
                                                             <span className="feed-subtitle">
-                                                                Production: {String(event.production_count || 0)} | Efficiency: {String(event.efficiency_percentage || 0)}%
+                                                                Production: {String(event.production_count || 0)} | Efficiency:{" "}
+                                                                {String(event.efficiency_percentage || 0)}%
                                                             </span>
                                                             <span className="feed-time">{new Date(Number(event.timestamp_ms)).toLocaleString("tr-TR")}</span>
                                                         </div>
@@ -641,7 +651,7 @@ function Dashboard() {
                                     <div className="feed-card">
                                         <h3>🕐 Active Shifts</h3>
                                         <div className="feed-list">
-                                            {recentShifts.slice(0, 15).map((event: Record<string, unknown>, i: number) => {
+                                            {recentShifts.slice(0, 15).map((event, i: number) => {
                                                 const isClockIn = Number(event.action_type) === 0;
 
                                                 return (
@@ -649,7 +659,11 @@ function Dashboard() {
                                                         <span className="feed-icon">{isClockIn ? "🕐" : "🏁"}</span>
                                                         <div className="feed-info">
                                                             <span className="feed-title">{isClockIn ? "Shift Started" : "Shift Ended"}</span>
-                                                            <span className="feed-time">{new Date(Number(event.timestamp_ms)).toLocaleString("tr-TR")}</span>
+                                                            <span className="feed-time">
+                                                                {event.timestamp_ms && Number(event.timestamp_ms) > 0
+                                                                    ? new Date(Number(event.timestamp_ms)).toLocaleString("en-US")
+                                                                    : "Invalid Date"}
+                                                            </span>
                                                         </div>
                                                         <span className={`feed-badge ${isClockIn ? "start" : "end"}`}>{isClockIn ? "IN" : "OUT"}</span>
                                                     </div>
@@ -664,7 +678,7 @@ function Dashboard() {
                                     <div className="feed-card">
                                         <h3>🏆 Recent Awards</h3>
                                         <div className="feed-list">
-                                            {recentAwards.slice(0, 15).map((event: Record<string, unknown>, i: number) => {
+                                            {recentAwards.slice(0, 15).map((event, i: number) => {
                                                 const awardName =
                                                     typeof event.award_name === "string"
                                                         ? event.award_name

@@ -9,6 +9,8 @@ export interface WorkerCard {
     total_production: number;
     efficiency_score: number;
     last_checkpoint_hash: number[];
+    current_shift_start_ms: number;
+    is_in_shift: boolean;
 }
 
 export interface Door {
@@ -72,6 +74,14 @@ export interface StatsUpdateEvent {
     checkpoint_hash: number[];
     timestamp_ms: number;
 }
+
+export interface ProductionIncrementEvent {
+    worker_address: string;
+    card_number: string;
+    production_units: number;
+    efficiency_percentage: number;
+    timestamp_ms: number;
+}
 export interface RegisterDoorForm {
     name: string;
     location: string;
@@ -80,6 +90,7 @@ export interface RegisterDoorForm {
 export interface RegisterMachineForm {
     name: string;
     machine_type: string;
+    location: string;
 }
 
 export interface IssueWorkerCardForm {
@@ -115,6 +126,7 @@ export interface UpdateDoorForm {
 export interface UpdateMachineForm {
     name: string;
     machine_type: string;
+    location: string;
 }
 
 export interface BatchRegisterDoorsForm {
@@ -125,6 +137,7 @@ export interface BatchRegisterDoorsForm {
 export interface BatchRegisterMachinesForm {
     names: string[];
     machine_types: string[];
+    locations: string[];
 }
 
 export interface BatchIssueWorkerCardsForm {

@@ -33,6 +33,7 @@ describe("Transaction Builders", () => {
         const tx = buildRegisterMachineTx(MOCK_ADMIN_CAP_ID, {
             name: "CNC Machine",
             machine_type: "Industrial",
+            location: "Factory Floor A",
         });
 
         expect(tx).toBeDefined();

@@ -9,6 +9,15 @@ import { useState, useEffect, useCallback } from "react";
 import { CONTRACT_CONFIG } from "../config/contracts";
 import type { WorkerCard, Door, Machine } from "../types/identity";
 import type { Transaction } from "@mysten/sui/transactions";
+import type {
+    SuiMoveObjectFields,
+    EventData,
+    RegistryFields,
+    DoorAccessHistoryItem,
+    MachineUsageHistoryItem,
+    ShiftHistoryItem,
+    AwardHistoryItem,
+} from "../types/sui";
 
 /**
  * Worker Card hook - retrieves the user's worker card
@@ -19,66 +28,58 @@ export function useWorkerCard() {
     const [workerCard, setWorkerCard] = useState<WorkerCard | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
+    const fetchWorkerCard = useCallback(async () => {
         if (!account?.address) {
             setWorkerCard(null);
             setLoading(false);
             return;
         }
-
-        const fetchWorkerCard = async () => {
-            try {
-                setLoading(true);
-                setError(null);
-
-                // Fetch objects owned by the user
-                const objects = await client.getOwnedObjects({
-                    owner: account.address,
-                    filter: {
-                        StructType: `${CONTRACT_CONFIG.PACKAGE_ID}::identity::WorkerCard`,
-                    },
-                    options: {
-                        showContent: true,
-                    },
-                });
-
-                if (objects.data.length > 0) {
-                    const cardData = objects.data[0].data as SuiObjectData;
-                    if (cardData.content && cardData.content.dataType === "moveObject") {
-                        const fields = cardData.content.fields as any;
-
-                        // Convert byte arrays to strings
-                        const decoder = new TextDecoder();
-
-                        setWorkerCard({
-                            id: cardData.objectId,
-                            worker_address: fields.worker_address,
-                            card_number: decoder.decode(new Uint8Array(fields.card_number)),
-                            name: decoder.decode(new Uint8Array(fields.name)),
-                            department: decoder.decode(new Uint8Array(fields.department)),
-                            is_active: fields.is_active,
-                            total_work_hours: Number(fields.total_work_hours),
-                            total_production: Number(fields.total_production),
-                            efficiency_score: Number(fields.efficiency_score),
-                            last_checkpoint_hash: fields.last_checkpoint_hash,
-                        });
-                    }
-                } else {
-                    setWorkerCard(null);
+        try {
+            setLoading(true);
+            setError(null);
+            const objects = await client.getOwnedObjects({
+                owner: account.address,
+                filter: {
+                    StructType: `${CONTRACT_CONFIG.PACKAGE_ID}::identity::WorkerCard`,
+                },
+                options: { showContent: true },
+            });
+            if (objects.data.length > 0) {
+                const cardData = objects.data[0].data as SuiObjectData;
+                if (cardData.content && cardData.content.dataType === "moveObject") {
+                    const fields = cardData.content.fields as SuiMoveObjectFields;
+                    const decoder = new TextDecoder();
+                    setWorkerCard({
+                        id: cardData.objectId,
+                        worker_address: fields.worker_address || "",
+                        card_number: fields.card_number ? decoder.decode(new Uint8Array(fields.card_number)) : "",
+                        name: fields.name ? decoder.decode(new Uint8Array(fields.name)) : "",
+                        department: fields.department ? decoder.decode(new Uint8Array(fields.department)) : "",
+                        is_active: fields.is_active ?? false,
+                        total_work_hours: Number(fields.total_work_hours || 0),
+                        total_production: Number(fields.total_production || 0),
+                        efficiency_score: Number(fields.efficiency_score || 0),
+                        last_checkpoint_hash: fields.last_checkpoint_hash || [],
+                        current_shift_start_ms: Number(fields.current_shift_start_ms || 0),
+                        is_in_shift: Boolean(fields.is_in_shift),
+                    });
                 }
-            } catch (err) {
-                console.error("Error fetching worker card:", err);
-                setError(err instanceof Error ? err.message : "Unknown error");
-            } finally {
-                setLoading(false);
+            } else {
+                setWorkerCard(null);
             }
-        };
-
-        fetchWorkerCard();
+        } catch (err) {
+            console.error("Error fetching worker card:", err);
+            setError(err instanceof Error ? err.message : "Unknown error");
+        } finally {
+            setLoading(false);
+        }
     }, [account?.address, client]);
 
-    return { workerCard, loading, error, refetch: () => {} };
+    useEffect(() => {
+        fetchWorkerCard();
+    }, [fetchWorkerCard]);
+
+    return { workerCard, loading, error, refetch: fetchWorkerCard };
 }
 
 /**
@@ -198,7 +199,7 @@ export function useDoors() {
                     return;
                 }
 
-                const fields = registry.data.content.fields as any;
+                const fields = registry.data.content.fields as RegistryFields;
                 const doorsTableId = fields.doors?.fields?.id?.id;
 
                 if (!doorsTableId) {
@@ -294,7 +295,7 @@ export function useMachines() {
                     return;
                 }
 
-                const fields = registry.data.content.fields as any;
+                const fields = registry.data.content.fields as RegistryFields;
                 const machinesTableId = fields.machines?.fields?.id?.id;
 
                 if (!machinesTableId) {
@@ -373,9 +374,9 @@ export function useMachines() {
 /**
  * Events hook - listen to blockchain events
  */
-export function useIdentityEvents(eventType?: string) {
+export function useIdentityEvents(eventType: string) {
     const client = useSuiClient();
-    const [events, setEvents] = useState<any[]>([]);
+    const [events, setEvents] = useState<EventData[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -392,11 +393,11 @@ export function useIdentityEvents(eventType?: string) {
                         limit: 50,
                         order: "descending",
                     });
-                    setEvents(eventQuery.data);
+                    setEvents(eventQuery.data as EventData[]);
                 } else {
                     // Query all event types
-                    const eventTypes = ["DoorAccessEvent", "MachineUsageEvent", "ClockEvent", "AwardEvent"];
-                    const allEvents: any[] = [];
+                    const eventTypes = ["DoorAccessEvent", "MachineUsageEvent", "ClockEvent", "AwardEvent", "ProductionIncrementEvent", "StatsUpdateEvent"];
+                    const allEvents: EventData[] = [];
 
                     for (const type of eventTypes) {
                         try {
@@ -407,7 +408,7 @@ export function useIdentityEvents(eventType?: string) {
                                 limit: 50,
                                 order: "descending",
                             });
-                            allEvents.push(...eventQuery.data);
+                            allEvents.push(...(eventQuery.data as EventData[]));
                         } catch (err) {
                             console.warn(`${type} event fetch error:`, err);
                         }
@@ -440,7 +441,7 @@ export function useIdentityEvents(eventType?: string) {
  */
 export function useWorkerDoorAccessHistory(workerCardId?: string) {
     const client = useSuiClient();
-    const [doorAccessHistory, setDoorAccessHistory] = useState<any[]>([]);
+    const [doorAccessHistory, setDoorAccessHistory] = useState<DoorAccessHistoryItem[]>([]);
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -455,8 +456,9 @@ export function useWorkerDoorAccessHistory(workerCardId?: string) {
                 });
 
                 if (card.data?.content && card.data.content.dataType === "moveObject") {
-                    const fields = card.data.content.fields as any;
-                    setDoorAccessHistory(fields.door_access_history || []);
+                    const fields = card.data.content.fields as SuiMoveObjectFields;
+                    const doorHistory = Array.isArray(fields.door_access_history) ? (fields.door_access_history as DoorAccessHistoryItem[]) : [];
+                    setDoorAccessHistory(doorHistory);
                 }
             } catch (err) {
                 console.error("Door access history fetch error:", err);
@@ -477,7 +479,7 @@ export function useWorkerDoorAccessHistory(workerCardId?: string) {
  */
 export function useWorkerMachineUsageHistory(workerCardId?: string) {
     const client = useSuiClient();
-    const [machineUsageHistory, setMachineUsageHistory] = useState<any[]>([]);
+    const [machineUsageHistory, setMachineUsageHistory] = useState<MachineUsageHistoryItem[]>([]);
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -492,8 +494,9 @@ export function useWorkerMachineUsageHistory(workerCardId?: string) {
                 });
 
                 if (card.data?.content && card.data.content.dataType === "moveObject") {
-                    const fields = card.data.content.fields as any;
-                    setMachineUsageHistory(fields.machine_usage_history || []);
+                    const fields = card.data.content.fields as SuiMoveObjectFields;
+                    const machineHistory = Array.isArray(fields.machine_usage_history) ? (fields.machine_usage_history as MachineUsageHistoryItem[]) : [];
+                    setMachineUsageHistory(machineHistory);
                 }
             } catch (err) {
                 console.error("Machine usage history fetch error:", err);
@@ -514,7 +517,7 @@ export function useWorkerMachineUsageHistory(workerCardId?: string) {
  */
 export function useWorkerShiftHistory(workerCardId?: string) {
     const client = useSuiClient();
-    const [shiftHistory, setShiftHistory] = useState<any[]>([]);
+    const [shiftHistory, setShiftHistory] = useState<ShiftHistoryItem[]>([]);
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -529,8 +532,9 @@ export function useWorkerShiftHistory(workerCardId?: string) {
                 });
 
                 if (card.data?.content && card.data.content.dataType === "moveObject") {
-                    const fields = card.data.content.fields as any;
-                    setShiftHistory(fields.shift_history || []);
+                    const fields = card.data.content.fields as SuiMoveObjectFields;
+                    const shiftHist = Array.isArray(fields.shift_history) ? (fields.shift_history as ShiftHistoryItem[]) : [];
+                    setShiftHistory(shiftHist);
                 }
             } catch (err) {
                 console.error("Shift history fetch error:", err);
@@ -551,7 +555,7 @@ export function useWorkerShiftHistory(workerCardId?: string) {
  */
 export function useWorkerAwardHistory(workerCardId?: string) {
     const client = useSuiClient();
-    const [awardHistory, setAwardHistory] = useState<any[]>([]);
+    const [awardHistory, setAwardHistory] = useState<AwardHistoryItem[]>([]);
     const [totalAwardPoints, setTotalAwardPoints] = useState(0);
     const [loading, setLoading] = useState(false);
 
@@ -567,8 +571,9 @@ export function useWorkerAwardHistory(workerCardId?: string) {
                 });
 
                 if (card.data?.content && card.data.content.dataType === "moveObject") {
-                    const fields = card.data.content.fields as any;
-                    setAwardHistory(fields.award_history || []);
+                    const fields = card.data.content.fields as SuiMoveObjectFields;
+                    const awardHist = Array.isArray(fields.award_history) ? (fields.award_history as AwardHistoryItem[]) : [];
+                    setAwardHistory(awardHist);
                     setTotalAwardPoints(Number(fields.total_award_points) || 0);
                 }
             } catch (err) {
@@ -607,7 +612,7 @@ export function useRegistryInfo() {
                 });
 
                 if (registry.data?.content && registry.data.content.dataType === "moveObject") {
-                    const fields = registry.data.content.fields as any;
+                    const fields = registry.data.content.fields as RegistryFields;
                     setRegistryInfo({
                         doorCounter: Number(fields.door_counter) || 0,
                         machineCounter: Number(fields.machine_counter) || 0,
@@ -631,7 +636,7 @@ export function useRegistryInfo() {
  */
 export function useRecentDoorAccess() {
     const client = useSuiClient();
-    const [recentDoorAccess, setRecentDoorAccess] = useState<any[]>([]);
+    const [recentDoorAccess, setRecentDoorAccess] = useState<DoorAccessHistoryItem[]>([]);
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -644,8 +649,9 @@ export function useRecentDoorAccess() {
                 });
 
                 if (registry.data?.content && registry.data.content.dataType === "moveObject") {
-                    const fields = registry.data.content.fields as any;
-                    setRecentDoorAccess(fields.recent_door_access || []);
+                    const fields = registry.data.content.fields as RegistryFields;
+                    const recentDoors = (fields.recent_door_access as DoorAccessHistoryItem[]) || [];
+                    setRecentDoorAccess(recentDoors);
                 }
             } catch (err) {
                 console.error("Recent door access fetch error:", err);
@@ -669,7 +675,7 @@ export function useRecentDoorAccess() {
  */
 export function useRecentMachineUsage() {
     const client = useSuiClient();
-    const [recentMachineUsage, setRecentMachineUsage] = useState<any[]>([]);
+    const [recentMachineUsage, setRecentMachineUsage] = useState<MachineUsageHistoryItem[]>([]);
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -682,8 +688,9 @@ export function useRecentMachineUsage() {
                 });
 
                 if (registry.data?.content && registry.data.content.dataType === "moveObject") {
-                    const fields = registry.data.content.fields as any;
-                    setRecentMachineUsage(fields.recent_machine_usage || []);
+                    const fields = registry.data.content.fields as RegistryFields;
+                    const recentMachines = (fields.recent_machine_usage as MachineUsageHistoryItem[]) || [];
+                    setRecentMachineUsage(recentMachines);
                 }
             } catch (err) {
                 console.error("Recent machine usage fetch error:", err);
@@ -707,7 +714,7 @@ export function useRecentMachineUsage() {
  */
 export function useRecentShifts() {
     const client = useSuiClient();
-    const [recentShifts, setRecentShifts] = useState<any[]>([]);
+    const [recentShifts, setRecentShifts] = useState<ShiftHistoryItem[]>([]);
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -720,8 +727,9 @@ export function useRecentShifts() {
                 });
 
                 if (registry.data?.content && registry.data.content.dataType === "moveObject") {
-                    const fields = registry.data.content.fields as any;
-                    setRecentShifts(fields.recent_shifts || []);
+                    const fields = registry.data.content.fields as RegistryFields;
+                    const recentShiftList = (fields.recent_shifts as ShiftHistoryItem[]) || [];
+                    setRecentShifts(recentShiftList);
                 }
             } catch (err) {
                 console.error("Recent shifts fetch error:", err);
@@ -745,7 +753,7 @@ export function useRecentShifts() {
  */
 export function useRecentAwards() {
     const client = useSuiClient();
-    const [recentAwards, setRecentAwards] = useState<any[]>([]);
+    const [recentAwards, setRecentAwards] = useState<AwardHistoryItem[]>([]);
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -758,8 +766,9 @@ export function useRecentAwards() {
                 });
 
                 if (registry.data?.content && registry.data.content.dataType === "moveObject") {
-                    const fields = registry.data.content.fields as any;
-                    setRecentAwards(fields.recent_awards || []);
+                    const fields = registry.data.content.fields as RegistryFields;
+                    const recentAwardList = (fields.recent_awards as AwardHistoryItem[]) || [];
+                    setRecentAwards(recentAwardList);
                 }
             } catch (err) {
                 console.error("Recent awards fetch error:", err);
