@@ -1,0 +1,100 @@
+.slush-illustration {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 0; /* behind content but above radial bg */
+  overflow: visible;
+}
+
+.slush-blob {
+  position: absolute;
+  width: 70vw;
+  height: 70vh;
+  opacity: var(--slush-intensity, 0.9);
+  transform-origin: center;
+  will-change: transform, opacity;
+}
+
+.slush-blob.blob-1 {
+  left: -10vw;
+  top: -14vh;
+  animation: blobFloat 24s ease-in-out infinite;
+}
+
+.slush-blob.blob-2 {
+  right: -12vw;
+  top: 18vh;
+  width: 55vw;
+  height: 55vh;
+  opacity: 0.85;
+  animation: blobFloat 28s ease-in-out infinite reverse;
+}
+
+.slush-lines {
+  position: absolute;
+  width: 120vw;
+  height: 60vh;
+  left: -10vw;
+  bottom: 5vh;
+  mix-blend-mode: screen;
+  opacity: 0.6;
+  transform-origin: center;
+  animation: linesShift 30s linear infinite;
+  pointer-events: none;
+}
+
+/* Light theme variants */
+:root[data-theme="light"] .slush-blob {
+  filter: saturate(0.95) brightness(1.05);
+  opacity: calc(var(--slush-intensity, 0.6) - 0.2);
+}
+
+:root[data-theme="light"] .slush-lines {
+  opacity: 0.4;
+}
+
+@keyframes blobFloat {
+  0% { transform: translateY(0) rotate(0deg) scale(1); }
+  50% { transform: translateY(-15px) rotate(6deg) scale(1.03); }
+  100% { transform: translateY(0) rotate(0deg) scale(1); }
+}
+
+@keyframes linesShift {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-40px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slush-blob, .slush-lines { animation: none !important; }
+}
+
+.slush-lines .line {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.slush-lines .scribble {
+  stroke: rgba(255,255,255,0.12);
+  stroke-width: 1.5;
+  stroke-dasharray: 6 6;
+  animation: dash 6s linear infinite;
+}
+
+@keyframes dash {
+  to { stroke-dashoffset: -48; }
+}
+
+/* Responsiveness */
+@media (max-width: 768px) {
+  .slush-blob { opacity: 0.9; }
+  .slush-blob.blob-1 { left: -20vw; top: -22vh; width: 120vw; }
+  .slush-blob.blob-2 { right: -26vw; top: 32vh; width: 110vw; }
+  .slush-lines { opacity: 0.35; }
+}
+
+@media (max-width: 480px) {
+  .slush-blob { display: none; }
+}

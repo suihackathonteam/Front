@@ -1,0 +1,94 @@
+/* Simple modal styles for mobile connect fallback */
+.mc-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 9999;
+  padding: 0 0.5rem 0.5rem 0.5rem;
+}
+
+.mc-modal {
+  width: 92%;
+  max-width: 480px;
+  background: var(--bg, #fff);
+  color: var(--text, #111);
+  border-radius: 12px;
+  padding: 1.2rem 1rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+.mc-modal h3 {
+  margin: 0 0 0.5rem 0;
+}
+
+.mc-modal p { margin: 0 0 1rem 0; color: var(--muted); }
+
+.mc-modal-close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: transparent;
+  border: none;
+  font-size: 1.6rem;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  line-height: 1;
+}
+
+.mc-actions { 
+  display: flex; 
+  flex-direction: column;
+  gap: 0.6rem; 
+  margin-bottom: 1rem; 
+}
+
+.mc-btn {
+  padding: 0.7rem 1rem;
+  border-radius: 8px;
+  border: none;
+  background: rgba(0,0,0,0.06);
+  color: var(--text);
+  cursor: pointer;
+  width: 100%;
+  font-size: 1rem;
+}
+
+.mc-btn-primary {
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  color: #fff;
+}
+
+.mc-hint { font-size: 0.85rem; color: var(--muted); text-align: center; }
+
+/* Mobile-only: push modal farther down from very bottom using safe area */
+@media (max-width: 640px) {
+  .mc-modal-overlay {
+    padding: 0 0.5rem calc(env(safe-area-inset-bottom, 20px) + 36px) 0.5rem;
+    align-items: flex-end; /* ensure bottom anchor */
+  }
+
+  .mc-modal {
+    width: calc(100% - 1rem);
+    margin-bottom: 0; /* overlay padding handles spacing */
+    border-radius: 14px;
+    box-shadow: 0 -8px 30px rgba(0,0,0,0.35);
+    position: absolute; /* anchor modal absolutely to overlay */
+    left: 50%;
+    transform: translateX(-50%);
+    /* place modal lower on the screen on mobile (percentage based) */
+    bottom: 6vh;
+  }
+}
+
+/* Extra: Respect safe-area on iOS for modal content */
+.mc-modal { padding-bottom: calc(env(safe-area-inset-bottom, 12px) + 12px); }
