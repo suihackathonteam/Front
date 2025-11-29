@@ -1,0 +1,135 @@
+.employee-list-container {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 1.5rem;
+    overflow-x: auto;
+    animation: fadeIn 0.5s ease-out;
+}
+
+.employee-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.employee-table thead th {
+    text-align: left;
+    padding: 1rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.8);
+    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.employee-table tbody tr {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    transition: background-color 0.2s;
+    cursor: pointer;
+}
+
+.employee-table tbody tr:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.employee-table tbody tr.selected {
+    background-color: rgba(100, 108, 255, 0.1);
+    border-left: 3px solid #646cff;
+}
+
+.employee-table tbody td {
+    padding: 1rem;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.9rem;
+}
+
+.employee-name {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+}
+
+.efficiency-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.efficiency-badge.high {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+}
+
+.efficiency-badge.medium {
+    background: rgba(251, 191, 36, 0.2);
+    color: #fbbf24;
+}
+
+.efficiency-badge.low {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+}
+
+.status {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.status.active {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+}
+
+.status.offline {
+    background: rgba(107, 114, 128, 0.2);
+    color: #9ca3af;
+}
+
+.employee-list-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 1rem;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .employee-list-container {
+        padding: 1rem;
+    }
+
+    .employee-table thead th,
+    .employee-table tbody td {
+        padding: 0.75rem;
+        font-size: 0.85rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .employee-table {
+        font-size: 0.8rem;
+    }
+
+    .employee-table thead th,
+    .employee-table tbody td {
+        padding: 0.5rem;
+    }
+}

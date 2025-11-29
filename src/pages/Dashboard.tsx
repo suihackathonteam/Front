@@ -1,9 +1,16 @@
 import { useState, useEffect, useMemo } from "react";
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import "../styles/Dashboard.css";
 import { useCurrentAccount, useSuiClient } from "@mysten/dapp-kit";
 import SuiConnectButton from "../components/SuiConnectButton";
-import { useIdentityEvents } from "../hooks/useIdentity";
+import { useIdentityEvents, useRecentDoorAccess, useRecentMachineUsage, useRecentShifts, useRecentAwards, useDoors, useMachines } from "../hooks/useIdentity";
+import StatCard from "../components/dashboard/StatCard";
+import DoorAccessChart from "../components/dashboard/DoorAccessChart";
+import MachineUsageChart from "../components/dashboard/MachineUsageChart";
+import EmployeeList from "../components/dashboard/EmployeeList";
+import EmployeeDetailView from "../components/dashboard/EmployeeDetailView";
+import DoorGrid from "../components/dashboard/DoorGrid";
+import MachineGrid from "../components/dashboard/MachineGrid";
+import LoadingSpinner from "../components/shared/LoadingSpinner";
 
 function Dashboard() {
     const [selectedView, setSelectedView] = useState("overview");
@@ -13,14 +20,69 @@ function Dashboard() {
 
     const { events: allEvents, loading: eventsLoading } = useIdentityEvents();
 
-    const [workerCards, setWorkerCards] = useState<any[]>([]);
+    // Fetch global activity data from registry
+    const { recentDoorAccess } = useRecentDoorAccess();
+    const { recentMachineUsage } = useRecentMachineUsage();
+    const { recentShifts } = useRecentShifts();
+    const { recentAwards } = useRecentAwards();
+    const { doors, loading: doorsLoading } = useDoors();
+    const { machines, loading: machinesLoading } = useMachines();
+
+    const [workerCards, setWorkerCards] = useState<
+        Array<{
+            id: string;
+            worker_address: string;
+            card_number: string;
+            name: string;
+            department: string;
+            is_active: boolean;
+            total_work_hours: number;
+            total_production: number;
+            efficiency_score: number;
+            event_count: number;
+        }>
+    >([]);
     const [loadingCards, setLoadingCards] = useState(true);
 
     const parsedEvents = useMemo(() => {
-        const doorEvents: any[] = [];
-        const machineEvents: any[] = [];
-        const clockEvents: any[] = [];
-        const awardEvents: any[] = [];
+        interface DoorEvent {
+            worker_address: string;
+            card_number: unknown;
+            door_id: number;
+            door_name: unknown;
+            access_type: number;
+            timestamp: Date;
+            is_entry: boolean;
+        }
+        interface MachineEvent {
+            worker_address: string;
+            card_number: unknown;
+            machine_id: number;
+            machine_name: unknown;
+            timestamp: Date;
+            duration: number;
+            production_count: number;
+            efficiency: number;
+        }
+        interface ClockEvent {
+            worker_address: string;
+            card_number: unknown;
+            timestamp: Date;
+            action_type: number;
+        }
+        interface AwardEvent {
+            worker_address: string;
+            card_number: unknown;
+            award_type: unknown;
+            points: number;
+            description: unknown;
+            timestamp: Date;
+        }
+
+        const doorEvents: DoorEvent[] = [];
+        const machineEvents: MachineEvent[] = [];
+        const clockEvents: ClockEvent[] = [];
+        const awardEvents: AwardEvent[] = [];
 
         allEvents.forEach((event) => {
             try {
@@ -86,7 +148,21 @@ function Dashboard() {
 
                 // For now, build worker cards from events
                 // This is a fallback approach since WorkerCards are not stored in registry
-                const uniqueWorkers = new Map<string, any>();
+                const uniqueWorkers = new Map<
+                    string,
+                    {
+                        id: string;
+                        worker_address: string;
+                        card_number: string;
+                        name: string;
+                        department: string;
+                        is_active: boolean;
+                        total_work_hours: number;
+                        total_production: number;
+                        efficiency_score: number;
+                        event_count: number;
+                    }
+                >();
 
                 // Process all events to build worker profiles
                 allEvents.forEach((event) => {
@@ -126,6 +202,7 @@ function Dashboard() {
                         }
 
                         const worker = uniqueWorkers.get(address);
+                        if (!worker) return;
                         worker.event_count++;
 
                         // Update stats based on event type
@@ -211,23 +288,13 @@ function Dashboard() {
             machineStats[machineId].count++;
         });
 
-        return Object.entries(machineStats).map(([_machineId, stats]) => ({
+        return Object.entries(machineStats).map(([, stats]) => ({
             machine: stats.name,
             usage: (stats.totalDuration / (1000 * 3600)).toFixed(1), // Convert ms to hours
             production: stats.totalProduction,
             efficiency: stats.count > 0 ? Math.round(stats.totalEfficiency / stats.count) : 0,
         }));
     }, [parsedEvents.machineEvents]);
-
-    const employeeProductivity = useMemo(() => {
-        return workerCards.map((card) => ({
-            name: card.name,
-            machine: card.department,
-            duration: (card.total_work_hours / (1000 * 3600)).toFixed(1), // Convert ms to hours
-            production: card.total_production,
-            efficiency: card.efficiency_score,
-        }));
-    }, [workerCards]);
 
     const employeeAwards = useMemo(() => {
         return parsedEvents.awardEvents.slice(0, 4).map((award, index) => {
@@ -318,20 +385,7 @@ function Dashboard() {
         return (
             <div className="dashboard-container">
                 <div className="dashboard-main">
-                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "400px", flexDirection: "column", gap: "20px" }}>
-                        <div
-                            className="spinner"
-                            style={{
-                                width: "50px",
-                                height: "50px",
-                                border: "4px solid #667eea",
-                                borderTop: "4px solid transparent",
-                                borderRadius: "50%",
-                                animation: "spin 1s linear infinite",
-                            }}
-                        ></div>
-                        <p style={{ color: "#b8b8b8" }}>Loading dashboard data...</p>
-                    </div>
+                    <LoadingSpinner size="large" message="Loading dashboard data..." />
                 </div>
             </div>
         );
@@ -362,20 +416,16 @@ function Dashboard() {
                             <button className={selectedView === "awards" ? "nav-active" : ""} onClick={() => setSelectedView("awards")}>
                                 🏆 Awards
                             </button>
+                            <button className={selectedView === "activity" ? "nav-active" : ""} onClick={() => setSelectedView("activity")}>
+                                📢 Live Feed
+                            </button>
                         </div>
                     </div>
 
                     {/* Real-time Stats */}
                     <div className="stats-grid">
                         {realtimeStats.map((stat, index) => (
-                            <div key={index} className="stat-card" style={{ borderLeftColor: stat.color }}>
-                                <div className="stat-icon">{stat.icon}</div>
-                                <div className="stat-info">
-                                    <p className="stat-title">{stat.title}</p>
-                                    <h3 className="stat-value">{stat.value}</h3>
-                                    <span className={`stat-change ${stat.change.startsWith("+") ? "positive" : "negative"}`}>{stat.change} today</span>
-                                </div>
-                            </div>
+                            <StatCard key={index} icon={stat.icon} title={stat.title} value={stat.value} change={stat.change} color={stat.color} />
                         ))}
                     </div>
 
@@ -393,76 +443,8 @@ function Dashboard() {
                                 <>
                                     {/* Charts Section */}
                                     <div className="charts-section">
-                                        <div className="chart-card">
-                                            <h3>Hourly Door Access Analysis</h3>
-                                            {doorAccessData.length === 0 ? (
-                                                <div style={{ textAlign: "center", padding: "60px", color: "#b8b8b8" }}>
-                                                    <p>No door access records yet</p>
-                                                </div>
-                                            ) : (
-                                                <ResponsiveContainer width="100%" height={300}>
-                                                    <LineChart data={doorAccessData}>
-                                                        <CartesianGrid strokeDasharray="3 3" stroke="#3a3a3a" />
-                                                        <XAxis dataKey="time" stroke="#b8b8b8" />
-                                                        <YAxis stroke="#b8b8b8" />
-                                                        <Tooltip
-                                                            contentStyle={{ background: "#2a2a2a", border: "1px solid #3a3a3a", borderRadius: "8px" }}
-                                                            labelStyle={{ color: "#fff" }}
-                                                        />
-                                                        <Legend />
-                                                        <Line type="monotone" dataKey="entries" stroke="#667eea" strokeWidth={2} name="Entry" />
-                                                        <Line type="monotone" dataKey="exits" stroke="#764ba2" strokeWidth={2} name="Exit" />
-                                                    </LineChart>
-                                                </ResponsiveContainer>
-                                            )}
-                                        </div>
-
-                                        <div className="chart-card">
-                                            <h3>Machine Usage Efficiency</h3>
-                                            {machineUsageData.length === 0 ? (
-                                                <div style={{ textAlign: "center", padding: "60px", color: "#b8b8b8" }}>
-                                                    <p>No machine usage records yet</p>
-                                                </div>
-                                            ) : (
-                                                <ResponsiveContainer width="100%" height={300}>
-                                                    <BarChart data={machineUsageData}>
-                                                        <CartesianGrid strokeDasharray="3 3" stroke="#3a3a3a" />
-                                                        <XAxis dataKey="machine" stroke="#b8b8b8" />
-                                                        <YAxis stroke="#b8b8b8" />
-                                                        <Tooltip
-                                                            contentStyle={{ background: "#2a2a2a", border: "1px solid #3a3a3a", borderRadius: "8px" }}
-                                                            labelStyle={{ color: "#fff" }}
-                                                        />
-                                                        <Legend />
-                                                        <Bar dataKey="efficiency" fill="#667eea" name="Efficiency %" />
-                                                    </BarChart>
-                                                </ResponsiveContainer>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    <div className="chart-card full-width">
-                                        <h3>Employee Production Performance</h3>
-                                        {employeeProductivity.length === 0 ? (
-                                            <div style={{ textAlign: "center", padding: "60px", color: "#b8b8b8" }}>
-                                                <p>No employee performance data yet</p>
-                                            </div>
-                                        ) : (
-                                            <ResponsiveContainer width="100%" height={300}>
-                                                <BarChart data={employeeProductivity}>
-                                                    <CartesianGrid strokeDasharray="3 3" stroke="#3a3a3a" />
-                                                    <XAxis dataKey="name" stroke="#b8b8b8" />
-                                                    <YAxis stroke="#b8b8b8" />
-                                                    <Tooltip
-                                                        contentStyle={{ background: "#2a2a2a", border: "1px solid #3a3a3a", borderRadius: "8px" }}
-                                                        labelStyle={{ color: "#fff" }}
-                                                    />
-                                                    <Legend />
-                                                    <Bar dataKey="production" fill="#667eea" name="Produced Items" />
-                                                    <Bar dataKey="efficiency" fill="#764ba2" name="Efficiency %" />
-                                                </BarChart>
-                                            </ResponsiveContainer>
-                                        )}
+                                        <DoorAccessChart data={doorAccessData} loading={eventsLoading} />
+                                        <MachineUsageChart data={machineUsageData} loading={eventsLoading} />
                                     </div>
                                 </>
                             )}
@@ -472,147 +454,20 @@ function Dashboard() {
                     {selectedView === "doors" && (
                         <div className="doors-section">
                             <div className="section-header">
-                                <h2>Door Access Tracking</h2>
-                                <button className="add-btn">+ New Record</button>
+                                <h2>Registered Doors</h2>
+                                <p>All door access points in the system</p>
                             </div>
-
-                            <div className="chart-card">
-                                <h3>Today's Access Movements</h3>
-                                <ResponsiveContainer width="100%" height={300}>
-                                    <LineChart data={doorAccessData}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#3a3a3a" />
-                                        <XAxis dataKey="time" stroke="#b8b8b8" />
-                                        <YAxis stroke="#b8b8b8" />
-                                        <Tooltip contentStyle={{ background: "#2a2a2a", border: "1px solid #3a3a3a", borderRadius: "8px" }} />
-                                        <Legend />
-                                        <Line type="monotone" dataKey="entries" stroke="#43e97b" strokeWidth={2} name="Entry" />
-                                        <Line type="monotone" dataKey="exits" stroke="#ff6b6b" strokeWidth={2} name="Exit" />
-                                    </LineChart>
-                                </ResponsiveContainer>
-                            </div>
-
-                            <div className="door-table">
-                                <h3>Recent Door Access</h3>
-                                {parsedEvents.doorEvents.length === 0 ? (
-                                    <div style={{ textAlign: "center", padding: "40px", color: "#b8b8b8" }}>
-                                        <p>No door access records yet</p>
-                                    </div>
-                                ) : (
-                                    <table>
-                                        <thead>
-                                            <tr>
-                                                <th>Employee</th>
-                                                <th>Door</th>
-                                                <th>Time</th>
-                                                <th>Type</th>
-                                                <th>Card No</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {parsedEvents.doorEvents.slice(0, 10).map((event, index) => {
-                                                const worker = workerCards.find((w) => w.worker_address === event.worker_address);
-
-                                                // Decode door name
-                                                let doorName = `Door ${event.door_id}`;
-                                                try {
-                                                    if (event.door_name) {
-                                                        if (typeof event.door_name === "string") {
-                                                            doorName = event.door_name;
-                                                        } else if (Array.isArray(event.door_name)) {
-                                                            doorName = new TextDecoder().decode(new Uint8Array(event.door_name));
-                                                        }
-                                                    }
-                                                } catch (e) {
-                                                    console.warn("Door name decode error:", e);
-                                                }
-
-                                                // Decode card number
-                                                let cardNumber = "N/A";
-                                                try {
-                                                    if (event.card_number) {
-                                                        if (typeof event.card_number === "string") {
-                                                            cardNumber = event.card_number;
-                                                        } else if (Array.isArray(event.card_number)) {
-                                                            cardNumber = new TextDecoder().decode(new Uint8Array(event.card_number));
-                                                        }
-                                                    }
-                                                } catch (e) {
-                                                    console.warn("Card number decode error:", e);
-                                                }
-
-                                                return (
-                                                    <tr key={index}>
-                                                        <td>{worker?.name || event.worker_address.slice(0, 8) + "..."}</td>
-                                                        <td>{doorName}</td>
-                                                        <td>{event.timestamp.toLocaleTimeString("tr-TR")}</td>
-                                                        <td>
-                                                            <span className={`badge ${event.is_entry ? "giris" : "cikis"}`}>
-                                                                {event.is_entry ? "Entry" : "Exit"}
-                                                            </span>
-                                                        </td>
-                                                        <td>{cardNumber}</td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
-                                )}
-                            </div>
+                            <DoorGrid doors={doors} loading={doorsLoading} />
                         </div>
                     )}
 
                     {selectedView === "machines" && (
                         <div className="machines-section">
                             <div className="section-header">
-                                <h2>Machine/Resource Usage Tracking</h2>
-                                <button className="add-btn">+ New Machine/Resource</button>
+                                <h2>Registered Machines</h2>
+                                <p>All production machines in the system</p>
                             </div>
-
-                            <div className="machine-stats-grid">
-                                {machineUsageData.map((machine, index) => (
-                                    <div key={index} className="machine-card">
-                                        <div className="machine-header">
-                                            <h3>{machine.machine}</h3>
-                                            <span className={`machine-status ${parseFloat(machine.usage) > 7 ? "active" : "idle"}`}>
-                                                {parseFloat(machine.usage) > 7 ? "● Active" : "○ Idle"}
-                                            </span>
-                                        </div>
-                                        <div className="machine-stats">
-                                            <div className="stat">
-                                                <span className="label">Usage Time</span>
-                                                <span className="value">{machine.usage}h</span>
-                                            </div>
-                                            <div className="stat">
-                                                <span className="label">Produced</span>
-                                                <span className="value">{machine.production} items</span>
-                                            </div>
-                                            <div className="stat">
-                                                <span className="label">Efficiency</span>
-                                                <span className="value">{machine.efficiency}%</span>
-                                            </div>
-                                        </div>
-                                        <div className="progress-bar">
-                                            <div className="progress-fill" style={{ width: `${machine.efficiency}%` }}></div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-
-                            <div className="chart-card full-width">
-                                <h3>Machine-Based Detailed Analysis</h3>
-                                <ResponsiveContainer width="100%" height={300}>
-                                    <BarChart data={machineUsageData}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#3a3a3a" />
-                                        <XAxis dataKey="machine" stroke="#b8b8b8" />
-                                        <YAxis stroke="#b8b8b8" />
-                                        <Tooltip contentStyle={{ background: "#2a2a2a", border: "1px solid #3a3a3a", borderRadius: "8px" }} />
-                                        <Legend />
-                                        <Bar dataKey="usage" fill="#667eea" name="Usage (hours)" />
-                                        <Bar dataKey="production" fill="#764ba2" name="Production (items)" />
-                                        <Bar dataKey="efficiency" fill="#f093fb" name="Efficiency %" />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </div>
+                            <MachineGrid machines={machines} loading={machinesLoading} />
                         </div>
                     )}
 
@@ -620,170 +475,25 @@ function Dashboard() {
                         <div className="employees-section">
                             <div className="section-header">
                                 <h2>Employee Detailed Tracking</h2>
-                                <button className="add-btn">+ New Employee</button>
                             </div>
 
-                            <div className="employee-table">
-                                {workerCards.length === 0 ? (
-                                    <div style={{ textAlign: "center", padding: "40px", color: "#b8b8b8" }}>
-                                        <p>No worker data yet</p>
-                                    </div>
-                                ) : (
-                                    <table>
-                                        <thead>
-                                            <tr>
-                                                <th>Employee</th>
-                                                <th>Department</th>
-                                                <th>Card No</th>
-                                                <th>Work Hours</th>
-                                                <th>Production</th>
-                                                <th>Efficiency</th>
-                                                <th>Events</th>
-                                                <th>Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {workerCards.map((card, index) => {
-                                                // Find last clock event for this worker
-                                                const lastClock = parsedEvents.clockEvents
-                                                    .filter((e) => e.worker_address === card.worker_address)
-                                                    .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())[0];
-
-                                                const isActive = lastClock && lastClock.action_type === 0; // 0 = clock in
-
-                                                return (
-                                                    <tr key={index} onClick={() => setSelectedEmployee(card.name)} style={{ cursor: "pointer" }}>
-                                                        <td>
-                                                            <span className="employee-name">👤 {card.name}</span>
-                                                        </td>
-                                                        <td>{card.department}</td>
-                                                        <td>{card.card_number}</td>
-                                                        <td>{(card.total_work_hours / (1000 * 3600)).toFixed(1)}h</td>
-                                                        <td>{card.total_production} items</td>
-                                                        <td>
-                                                            <span
-                                                                className={`verimlilik-badge ${
-                                                                    card.efficiency_score >= 80 ? "high" : card.efficiency_score >= 50 ? "medium" : "low"
-                                                                }`}
-                                                            >
-                                                                {card.efficiency_score}%
-                                                            </span>
-                                                        </td>
-                                                        <td>{card.event_count || 0}</td>
-                                                        <td>
-                                                            <span className={`status ${isActive ? "active" : "offline"}`}>
-                                                                {isActive ? "Active" : "Offline"}
-                                                            </span>
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
-                                )}
-                            </div>
+                            <EmployeeList
+                                employees={workerCards}
+                                clockEvents={parsedEvents.clockEvents}
+                                onSelectEmployee={setSelectedEmployee}
+                                selectedEmployee={selectedEmployee}
+                                loading={loadingCards}
+                            />
 
                             {selectedEmployee && (
-                                <div className="employee-detail">
-                                    <h3>📊 {selectedEmployee} - Detailed Report</h3>
-                                    <div className="detail-grid">
-                                        <div className="detail-card">
-                                            <h4>Door Access</h4>
-                                            <ul>
-                                                {parsedEvents.doorEvents
-                                                    .filter((e) => {
-                                                        const worker = workerCards.find((w) => w.name === selectedEmployee);
-                                                        return worker && e.worker_address === worker.worker_address;
-                                                    })
-                                                    .slice(0, 10)
-                                                    .map((event, i) => {
-                                                        let doorName = `Door ${event.door_id}`;
-                                                        try {
-                                                            if (event.door_name) {
-                                                                if (typeof event.door_name === "string") {
-                                                                    doorName = event.door_name;
-                                                                } else if (Array.isArray(event.door_name)) {
-                                                                    doorName = new TextDecoder().decode(new Uint8Array(event.door_name));
-                                                                }
-                                                            }
-                                                        } catch (e) {
-                                                            console.warn("Door name decode error:", e);
-                                                        }
-
-                                                        return (
-                                                            <li key={i}>
-                                                                {doorName}: {event.timestamp.toLocaleTimeString("tr-TR")} - {event.is_entry ? "Entry" : "Exit"}
-                                                            </li>
-                                                        );
-                                                    })}
-                                                {parsedEvents.doorEvents.filter((e) => {
-                                                    const worker = workerCards.find((w) => w.name === selectedEmployee);
-                                                    return worker && e.worker_address === worker.worker_address;
-                                                }).length === 0 && <li>No door access records</li>}
-                                            </ul>
-                                        </div>
-                                        <div className="detail-card">
-                                            <h4>Machine Usage</h4>
-                                            <ul>
-                                                {parsedEvents.machineEvents
-                                                    .filter((e) => {
-                                                        const worker = workerCards.find((w) => w.name === selectedEmployee);
-                                                        return worker && e.worker_address === worker.worker_address;
-                                                    })
-                                                    .slice(0, 10)
-                                                    .map((event, i) => {
-                                                        let machineName = `Machine ${event.machine_id}`;
-                                                        try {
-                                                            if (event.machine_name) {
-                                                                if (typeof event.machine_name === "string") {
-                                                                    machineName = event.machine_name;
-                                                                } else if (Array.isArray(event.machine_name)) {
-                                                                    machineName = new TextDecoder().decode(new Uint8Array(event.machine_name));
-                                                                }
-                                                            }
-                                                        } catch (e) {
-                                                            console.warn("Machine name decode error:", e);
-                                                        }
-
-                                                        return (
-                                                            <li key={i}>
-                                                                {machineName}: {(event.duration / (1000 * 3600)).toFixed(1)}h - {event.production_count} items (
-                                                                {event.efficiency}%)
-                                                            </li>
-                                                        );
-                                                    })}
-                                                {parsedEvents.machineEvents.filter((e) => {
-                                                    const worker = workerCards.find((w) => w.name === selectedEmployee);
-                                                    return worker && e.worker_address === worker.worker_address;
-                                                }).length === 0 && <li>No machine usage records</li>}
-                                            </ul>
-                                        </div>
-                                        <div className="detail-card">
-                                            <h4>Clock Events</h4>
-                                            <ul>
-                                                {parsedEvents.clockEvents
-                                                    .filter((e) => {
-                                                        const worker = workerCards.find((w) => w.name === selectedEmployee);
-                                                        return worker && e.worker_address === worker.worker_address;
-                                                    })
-                                                    .slice(0, 10)
-                                                    .map((event, i) => (
-                                                        <li key={i}>
-                                                            {event.action_type === 0 ? "🕐 Clock In" : "🏁 Clock Out"}:{" "}
-                                                            {event.timestamp.toLocaleString("tr-TR")}
-                                                        </li>
-                                                    ))}
-                                                {parsedEvents.clockEvents.filter((e) => {
-                                                    const worker = workerCards.find((w) => w.name === selectedEmployee);
-                                                    return worker && e.worker_address === worker.worker_address;
-                                                }).length === 0 && <li>No clock events</li>}
-                                            </ul>
-                                        </div>
-                                    </div>
-                                    <button className="close-detail" onClick={() => setSelectedEmployee(null)}>
-                                        Close
-                                    </button>
-                                </div>
+                                <EmployeeDetailView
+                                    employeeName={selectedEmployee}
+                                    workerAddress={workerCards.find((w) => w.name === selectedEmployee)?.worker_address || ""}
+                                    doorEvents={parsedEvents.doorEvents}
+                                    machineEvents={parsedEvents.machineEvents}
+                                    clockEvents={parsedEvents.clockEvents}
+                                    onClose={() => setSelectedEmployee(null)}
+                                />
                             )}
                         </div>
                     )}
@@ -858,6 +568,129 @@ function Dashboard() {
                                     </div>
                                 </>
                             )}
+                        </div>
+                    )}
+
+                    {selectedView === "activity" && (
+                        <div className="activity-feed-section">
+                            <div className="section-header">
+                                <h2>🔴 Live Activity Feed</h2>
+                                <p>Real-time global system activity</p>
+                            </div>
+
+                            <div className="feed-container">
+                                {/* Door Access Feed */}
+                                {recentDoorAccess.length > 0 && (
+                                    <div className="feed-card">
+                                        <h3>🚪 Recent Door Access</h3>
+                                        <div className="feed-list">
+                                            {recentDoorAccess.slice(0, 15).map((event: Record<string, unknown>, i: number) => {
+                                                const doorName =
+                                                    typeof event.door_name === "string"
+                                                        ? event.door_name
+                                                        : new TextDecoder().decode(new Uint8Array(event.door_name as number[]));
+                                                const isEntry = Number(event.access_type) === 2;
+
+                                                return (
+                                                    <div key={i} className="feed-item">
+                                                        <span className="feed-icon">{isEntry ? "➡️" : "⬅️"}</span>
+                                                        <div className="feed-info">
+                                                            <span className="feed-title">{doorName}</span>
+                                                            <span className="feed-time">{new Date(Number(event.timestamp_ms)).toLocaleString("tr-TR")}</span>
+                                                        </div>
+                                                        <span className="feed-badge">{isEntry ? "ENTRY" : "EXIT"}</span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Machine Usage Feed */}
+                                {recentMachineUsage.length > 0 && (
+                                    <div className="feed-card">
+                                        <h3>⚙️ Recent Machine Usage</h3>
+                                        <div className="feed-list">
+                                            {recentMachineUsage.slice(0, 15).map((event: Record<string, unknown>, i: number) => {
+                                                const machineName =
+                                                    typeof event.machine_name === "string"
+                                                        ? event.machine_name
+                                                        : Array.isArray(event.machine_name) 
+                                                        ? new TextDecoder().decode(new Uint8Array(event.machine_name as number[]))
+                                                        : "Unknown Machine";
+
+                                                return (
+                                                    <div key={i} className="feed-item">
+                                                        <span className="feed-icon">⚙️</span>
+                                                        <div className="feed-info">
+                                                            <span className="feed-title">{machineName}</span>
+                                                            <span className="feed-subtitle">
+                                                                Production: {String(event.production_count || 0)} | Efficiency: {String(event.efficiency_percentage || 0)}%
+                                                            </span>
+                                                            <span className="feed-time">{new Date(Number(event.timestamp_ms)).toLocaleString("tr-TR")}</span>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Shift Feed */}
+                                {recentShifts.length > 0 && (
+                                    <div className="feed-card">
+                                        <h3>🕐 Active Shifts</h3>
+                                        <div className="feed-list">
+                                            {recentShifts.slice(0, 15).map((event: Record<string, unknown>, i: number) => {
+                                                const isClockIn = Number(event.action_type) === 0;
+
+                                                return (
+                                                    <div key={i} className="feed-item">
+                                                        <span className="feed-icon">{isClockIn ? "🕐" : "🏁"}</span>
+                                                        <div className="feed-info">
+                                                            <span className="feed-title">{isClockIn ? "Shift Started" : "Shift Ended"}</span>
+                                                            <span className="feed-time">{new Date(Number(event.timestamp_ms)).toLocaleString("tr-TR")}</span>
+                                                        </div>
+                                                        <span className={`feed-badge ${isClockIn ? "start" : "end"}`}>{isClockIn ? "IN" : "OUT"}</span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Awards Feed */}
+                                {recentAwards.length > 0 && (
+                                    <div className="feed-card">
+                                        <h3>🏆 Recent Awards</h3>
+                                        <div className="feed-list">
+                                            {recentAwards.slice(0, 15).map((event: Record<string, unknown>, i: number) => {
+                                                const awardName =
+                                                    typeof event.award_name === "string"
+                                                        ? event.award_name
+                                                        : new TextDecoder().decode(new Uint8Array(event.award_name as number[]));
+
+                                                return (
+                                                    <div key={i} className="feed-item">
+                                                        <span className="feed-icon">🎁</span>
+                                                        <div className="feed-info">
+                                                            <span className="feed-title">{awardName}</span>
+                                                            <span className="feed-subtitle">Points: {String(event.points || 0)}</span>
+                                                            <span className="feed-time">{new Date(Number(event.timestamp_ms)).toLocaleString("tr-TR")}</span>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {recentDoorAccess.length === 0 && recentMachineUsage.length === 0 && recentShifts.length === 0 && recentAwards.length === 0 && (
+                                    <div style={{ textAlign: "center", padding: "40px", color: "#b8b8b8" }}>
+                                        <p>No activity recorded yet</p>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     )}
                 </div>

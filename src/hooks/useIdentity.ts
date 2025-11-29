@@ -68,8 +68,8 @@ export function useWorkerCard() {
                     setWorkerCard(null);
                 }
             } catch (err) {
-                console.error("Worker card getirme hatası:", err);
-                setError(err instanceof Error ? err.message : "Bilinmeyen hata");
+                console.error("Error fetching worker card:", err);
+                setError(err instanceof Error ? err.message : "Unknown error");
             } finally {
                 setLoading(false);
             }
@@ -118,7 +118,7 @@ export function useAdminCap() {
                     setAdminCapId(null);
                 }
             } catch (err) {
-                console.error("Admin kontrol hatası:", err);
+                console.error("Error checking admin cap:", err);
                 setIsAdmin(false);
                 setAdminCapId(null);
             } finally {
@@ -142,6 +142,7 @@ export function useIdentityTransaction() {
 
     const executeTransaction = useCallback(
         async (tx: string | Transaction, options?: { onSuccess?: () => void; onError?: (error: string) => void }) => {
+            console.log("🔄 executeTransaction called with:", { tx, options });
             setIsLoading(true);
             setError(null);
 
@@ -150,12 +151,14 @@ export function useIdentityTransaction() {
                     transaction: tx,
                 },
                 {
-                    onSuccess: () => {
+                    onSuccess: (result) => {
+                        console.log("✅ Transaction signed and executed:", result);
                         setIsLoading(false);
                         options?.onSuccess?.();
                     },
                     onError: (err) => {
-                        const errorMsg = err instanceof Error ? err.message : "Transaction başarısız";
+                        console.error("❌ Transaction error:", err);
+                        const errorMsg = err instanceof Error ? err.message : "Transaction failed";
                         setError(errorMsg);
                         setIsLoading(false);
                         options?.onError?.(errorMsg);
@@ -176,24 +179,84 @@ export function useDoors() {
     const client = useSuiClient();
     const [doors, setDoors] = useState<Door[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchDoors = async () => {
             try {
                 setLoading(true);
-                // Fetch doors from the SystemRegistry
+                setError(null);
+
+                // Fetch the SystemRegistry object
                 const registry = await client.getObject({
                     id: CONTRACT_CONFIG.SYSTEM_REGISTRY_ID,
                     options: { showContent: true },
                 });
 
-                if (registry.data?.content && registry.data.content.dataType === "moveObject") {
-                    // Parse doors from the table (this can be simplified using an indexer)
-                    // For now return an empty array; indexer integration is required
+                if (!registry.data?.content || registry.data.content.dataType !== "moveObject") {
                     setDoors([]);
+                    return;
                 }
+
+                const fields = registry.data.content.fields as any;
+                const doorsTableId = fields.doors?.fields?.id?.id;
+
+                if (!doorsTableId) {
+                    setDoors([]);
+                    return;
+                }
+
+                // Fetch dynamic fields (doors from the table)
+                const dynamicFields = await client.getDynamicFields({
+                    parentId: doorsTableId,
+                });
+
+                const doorPromises = dynamicFields.data.map(async (field) => {
+                    try {
+                        const doorObject = await client.getDynamicFieldObject({
+                            parentId: doorsTableId,
+                            name: {
+                                type: "u64",
+                                value: field.name.value,
+                            },
+                        });
+
+                        if (doorObject.data?.content && doorObject.data.content.dataType === "moveObject") {
+                            const doorData = doorObject.data.content.fields as Record<string, unknown>;
+
+                            // Data is in value.fields structure
+                            const valueData = doorData.value as Record<string, unknown>;
+                            const fields = valueData?.fields as Record<string, unknown>;
+
+                            if (!fields) {
+                                console.warn("Door fields not found:", doorData);
+                                return null;
+                            }
+
+                            const decoder = new TextDecoder();
+
+                            return {
+                                door_id: Number(fields.door_id),
+                                name: Array.isArray(fields.name)
+                                    ? decoder.decode(new Uint8Array(fields.name as number[]))
+                                    : String(fields.name || "Unknown Door"),
+                                location: Array.isArray(fields.location)
+                                    ? decoder.decode(new Uint8Array(fields.location as number[]))
+                                    : String(fields.location || "Unknown Location"),
+                                is_active: Boolean(fields.is_active),
+                            } as Door;
+                        }
+                        return null;
+                    } catch (err) {
+                        console.error("Error fetching door:", err);
+                        return null;
+                    }
+                });
+                const doorsData = await Promise.all(doorPromises);
+                setDoors(doorsData.filter((d): d is Door => d !== null));
             } catch (err) {
-                console.error("Doors getirme hatası:", err);
+                console.error("Error fetching doors:", err);
+                setError(err instanceof Error ? err.message : "Failed to fetch doors");
             } finally {
                 setLoading(false);
             }
@@ -202,7 +265,7 @@ export function useDoors() {
         fetchDoors();
     }, [client]);
 
-    return { doors, loading };
+    return { doors, loading, error };
 }
 
 /**
@@ -212,23 +275,90 @@ export function useMachines() {
     const client = useSuiClient();
     const [machines, setMachines] = useState<Machine[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchMachines = async () => {
             try {
                 setLoading(true);
-                // Fetch machines from the SystemRegistry
+                setError(null);
+
+                // Fetch the SystemRegistry object
                 const registry = await client.getObject({
                     id: CONTRACT_CONFIG.SYSTEM_REGISTRY_ID,
                     options: { showContent: true },
                 });
 
-                if (registry.data?.content && registry.data.content.dataType === "moveObject") {
-                    // Parse machines from the table (can be simplified with an indexer)
+                if (!registry.data?.content || registry.data.content.dataType !== "moveObject") {
                     setMachines([]);
+                    return;
                 }
+
+                const fields = registry.data.content.fields as any;
+                const machinesTableId = fields.machines?.fields?.id?.id;
+
+                if (!machinesTableId) {
+                    setMachines([]);
+                    return;
+                }
+
+                // Fetch dynamic fields (machines from the table)
+                const dynamicFields = await client.getDynamicFields({
+                    parentId: machinesTableId,
+                });
+
+                const machinePromises = dynamicFields.data.map(async (field) => {
+                    try {
+                        const machineObject = await client.getDynamicFieldObject({
+                            parentId: machinesTableId,
+                            name: {
+                                type: "u64",
+                                value: field.name.value,
+                            },
+                        });
+
+                        if (machineObject.data?.content && machineObject.data.content.dataType === "moveObject") {
+                            const machineData = machineObject.data.content.fields as Record<string, unknown>;
+
+                            // Data is in value.fields structure
+                            const valueData = machineData.value as Record<string, unknown>;
+                            const fields = valueData?.fields as Record<string, unknown>;
+
+                            if (!fields) {
+                                console.warn("Machine fields not found:", machineData);
+                                return null;
+                            }
+
+                            const decoder = new TextDecoder();
+
+                            return {
+                                machine_id: Number(fields.machine_id),
+                                name: Array.isArray(fields.name)
+                                    ? decoder.decode(new Uint8Array(fields.name as number[]))
+                                    : String(fields.name || "Unknown Machine"),
+                                machine_type: Array.isArray(fields.machine_type)
+                                    ? decoder.decode(new Uint8Array(fields.machine_type as number[]))
+                                    : String(fields.machine_type || "Unknown Type"),
+                                location: Array.isArray(fields.location)
+                                    ? decoder.decode(new Uint8Array(fields.location as number[]))
+                                    : String(fields.location || "Unknown Location"),
+                                is_active: Boolean(fields.is_active),
+                                total_usage_time_ms: Number(fields.total_usage_time_ms || 0),
+                                total_production: Number(fields.total_production || 0),
+                            } as Machine;
+                        }
+                        return null;
+                    } catch (err) {
+                        console.error("Error fetching machine:", err);
+                        return null;
+                    }
+                });
+
+                const machinesData = await Promise.all(machinePromises);
+                setMachines(machinesData.filter((m): m is Machine => m !== null));
             } catch (err) {
-                console.error("Machines getirme hatası:", err);
+                console.error("Error fetching machines:", err);
+                setError(err instanceof Error ? err.message : "Failed to fetch machines");
             } finally {
                 setLoading(false);
             }
@@ -237,7 +367,7 @@ export function useMachines() {
         fetchMachines();
     }, [client]);
 
-    return { machines, loading };
+    return { machines, loading, error };
 }
 
 /**
@@ -288,7 +418,7 @@ export function useIdentityEvents(eventType?: string) {
                     setEvents(allEvents);
                 }
             } catch (err) {
-                console.error("Events getirme hatası:", err);
+                console.error("Error fetching events:", err);
                 setEvents([]);
             } finally {
                 setLoading(false);
@@ -303,4 +433,347 @@ export function useIdentityEvents(eventType?: string) {
     }, [client, eventType]);
 
     return { events, loading };
+}
+
+/**
+ * Worker's door access history hook
+ */
+export function useWorkerDoorAccessHistory(workerCardId?: string) {
+    const client = useSuiClient();
+    const [doorAccessHistory, setDoorAccessHistory] = useState<any[]>([]);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (!workerCardId) return;
+
+        const fetchHistory = async () => {
+            try {
+                setLoading(true);
+                const card = await client.getObject({
+                    id: workerCardId,
+                    options: { showContent: true },
+                });
+
+                if (card.data?.content && card.data.content.dataType === "moveObject") {
+                    const fields = card.data.content.fields as any;
+                    setDoorAccessHistory(fields.door_access_history || []);
+                }
+            } catch (err) {
+                console.error("Door access history fetch error:", err);
+                setDoorAccessHistory([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchHistory();
+    }, [workerCardId, client]);
+
+    return { doorAccessHistory, loading };
+}
+
+/**
+ * Worker's machine usage history hook
+ */
+export function useWorkerMachineUsageHistory(workerCardId?: string) {
+    const client = useSuiClient();
+    const [machineUsageHistory, setMachineUsageHistory] = useState<any[]>([]);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (!workerCardId) return;
+
+        const fetchHistory = async () => {
+            try {
+                setLoading(true);
+                const card = await client.getObject({
+                    id: workerCardId,
+                    options: { showContent: true },
+                });
+
+                if (card.data?.content && card.data.content.dataType === "moveObject") {
+                    const fields = card.data.content.fields as any;
+                    setMachineUsageHistory(fields.machine_usage_history || []);
+                }
+            } catch (err) {
+                console.error("Machine usage history fetch error:", err);
+                setMachineUsageHistory([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchHistory();
+    }, [workerCardId, client]);
+
+    return { machineUsageHistory, loading };
+}
+
+/**
+ * Worker's shift history hook (clock in/out)
+ */
+export function useWorkerShiftHistory(workerCardId?: string) {
+    const client = useSuiClient();
+    const [shiftHistory, setShiftHistory] = useState<any[]>([]);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (!workerCardId) return;
+
+        const fetchHistory = async () => {
+            try {
+                setLoading(true);
+                const card = await client.getObject({
+                    id: workerCardId,
+                    options: { showContent: true },
+                });
+
+                if (card.data?.content && card.data.content.dataType === "moveObject") {
+                    const fields = card.data.content.fields as any;
+                    setShiftHistory(fields.shift_history || []);
+                }
+            } catch (err) {
+                console.error("Shift history fetch error:", err);
+                setShiftHistory([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchHistory();
+    }, [workerCardId, client]);
+
+    return { shiftHistory, loading };
+}
+
+/**
+ * Worker's award history hook
+ */
+export function useWorkerAwardHistory(workerCardId?: string) {
+    const client = useSuiClient();
+    const [awardHistory, setAwardHistory] = useState<any[]>([]);
+    const [totalAwardPoints, setTotalAwardPoints] = useState(0);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (!workerCardId) return;
+
+        const fetchHistory = async () => {
+            try {
+                setLoading(true);
+                const card = await client.getObject({
+                    id: workerCardId,
+                    options: { showContent: true },
+                });
+
+                if (card.data?.content && card.data.content.dataType === "moveObject") {
+                    const fields = card.data.content.fields as any;
+                    setAwardHistory(fields.award_history || []);
+                    setTotalAwardPoints(Number(fields.total_award_points) || 0);
+                }
+            } catch (err) {
+                console.error("Award history fetch error:", err);
+                setAwardHistory([]);
+                setTotalAwardPoints(0);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchHistory();
+    }, [workerCardId, client]);
+
+    return { awardHistory, totalAwardPoints, loading };
+}
+
+/**
+ * System registry info hook
+ */
+export function useRegistryInfo() {
+    const client = useSuiClient();
+    const [registryInfo, setRegistryInfo] = useState<{ doorCounter: number; machineCounter: number }>({
+        doorCounter: 0,
+        machineCounter: 0,
+    });
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        const fetchInfo = async () => {
+            try {
+                setLoading(true);
+                const registry = await client.getObject({
+                    id: CONTRACT_CONFIG.SYSTEM_REGISTRY_ID,
+                    options: { showContent: true },
+                });
+
+                if (registry.data?.content && registry.data.content.dataType === "moveObject") {
+                    const fields = registry.data.content.fields as any;
+                    setRegistryInfo({
+                        doorCounter: Number(fields.door_counter) || 0,
+                        machineCounter: Number(fields.machine_counter) || 0,
+                    });
+                }
+            } catch (err) {
+                console.error("Registry info fetch error:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchInfo();
+    }, [client]);
+
+    return { registryInfo, loading };
+}
+
+/**
+ * Recent global door access hook (from registry)
+ */
+export function useRecentDoorAccess() {
+    const client = useSuiClient();
+    const [recentDoorAccess, setRecentDoorAccess] = useState<any[]>([]);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                setLoading(true);
+                const registry = await client.getObject({
+                    id: CONTRACT_CONFIG.SYSTEM_REGISTRY_ID,
+                    options: { showContent: true },
+                });
+
+                if (registry.data?.content && registry.data.content.dataType === "moveObject") {
+                    const fields = registry.data.content.fields as any;
+                    setRecentDoorAccess(fields.recent_door_access || []);
+                }
+            } catch (err) {
+                console.error("Recent door access fetch error:", err);
+                setRecentDoorAccess([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+        // Refresh every 15 seconds
+        const interval = setInterval(fetchData, 15000);
+        return () => clearInterval(interval);
+    }, [client]);
+
+    return { recentDoorAccess, loading };
+}
+
+/**
+ * Recent global machine usage hook (from registry)
+ */
+export function useRecentMachineUsage() {
+    const client = useSuiClient();
+    const [recentMachineUsage, setRecentMachineUsage] = useState<any[]>([]);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                setLoading(true);
+                const registry = await client.getObject({
+                    id: CONTRACT_CONFIG.SYSTEM_REGISTRY_ID,
+                    options: { showContent: true },
+                });
+
+                if (registry.data?.content && registry.data.content.dataType === "moveObject") {
+                    const fields = registry.data.content.fields as any;
+                    setRecentMachineUsage(fields.recent_machine_usage || []);
+                }
+            } catch (err) {
+                console.error("Recent machine usage fetch error:", err);
+                setRecentMachineUsage([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+        // Refresh every 15 seconds
+        const interval = setInterval(fetchData, 15000);
+        return () => clearInterval(interval);
+    }, [client]);
+
+    return { recentMachineUsage, loading };
+}
+
+/**
+ * Recent global shifts hook (from registry)
+ */
+export function useRecentShifts() {
+    const client = useSuiClient();
+    const [recentShifts, setRecentShifts] = useState<any[]>([]);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                setLoading(true);
+                const registry = await client.getObject({
+                    id: CONTRACT_CONFIG.SYSTEM_REGISTRY_ID,
+                    options: { showContent: true },
+                });
+
+                if (registry.data?.content && registry.data.content.dataType === "moveObject") {
+                    const fields = registry.data.content.fields as any;
+                    setRecentShifts(fields.recent_shifts || []);
+                }
+            } catch (err) {
+                console.error("Recent shifts fetch error:", err);
+                setRecentShifts([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+        // Refresh every 10 seconds
+        const interval = setInterval(fetchData, 10000);
+        return () => clearInterval(interval);
+    }, [client]);
+
+    return { recentShifts, loading };
+}
+
+/**
+ * Recent global awards hook (from registry)
+ */
+export function useRecentAwards() {
+    const client = useSuiClient();
+    const [recentAwards, setRecentAwards] = useState<any[]>([]);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                setLoading(true);
+                const registry = await client.getObject({
+                    id: CONTRACT_CONFIG.SYSTEM_REGISTRY_ID,
+                    options: { showContent: true },
+                });
+
+                if (registry.data?.content && registry.data.content.dataType === "moveObject") {
+                    const fields = registry.data.content.fields as any;
+                    setRecentAwards(fields.recent_awards || []);
+                }
+            } catch (err) {
+                console.error("Recent awards fetch error:", err);
+                setRecentAwards([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+        // Refresh every 15 seconds
+        const interval = setInterval(fetchData, 15000);
+        return () => clearInterval(interval);
+    }, [client]);
+
+    return { recentAwards, loading };
 }

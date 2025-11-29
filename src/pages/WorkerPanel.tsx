@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useCurrentAccount } from "@mysten/dapp-kit";
-import { useWorkerCard, useIdentityTransaction, useIdentityEvents } from "../hooks/useIdentity";
+import { useWorkerCard, useIdentityTransaction, useIdentityEvents, useWorkerAwardHistory } from "../hooks/useIdentity";
 import { buildClockInOutTx } from "../utils/transactions";
 import { ACTION_TYPES, CONTRACT_CONFIG } from "../config/contracts";
 import SuiConnectButton from "../components/SuiConnectButton";
@@ -13,6 +13,10 @@ function WorkerPanel() {
     const { events: doorEvents } = useIdentityEvents("DoorAccessEvent");
     const { events: machineEvents } = useIdentityEvents("MachineUsageEvent");
     const { events: clockEvents } = useIdentityEvents("ClockEvent");
+    const { events: awardEvents } = useIdentityEvents("AwardEvent");
+
+    // Fetch award history from worker card
+    const { awardHistory, totalAwardPoints } = useWorkerAwardHistory(workerCard?.id);
 
     // Get door entries from localStorage
     const [localDoorEntries, setLocalDoorEntries] = useState<any[]>([]);
@@ -33,7 +37,7 @@ function WorkerPanel() {
     const allDoorEvents = [...doorEvents, ...localDoorEntries];
 
     const [showSuccess, setShowSuccess] = useState(false);
-    const [activeTab, setActiveTab] = useState<"info" | "activity">("info");
+    const [activeTab, setActiveTab] = useState<"info" | "activity" | "awards">("info");
     const [shiftActive, setShiftActive] = useState(() => {
         const saved = localStorage.getItem("shiftActive");
         return saved === "true";
@@ -137,7 +141,7 @@ function WorkerPanel() {
     const handleClockIn = async () => {
         // Prevent starting a new shift if one is already active
         if (shiftActive) {
-            alert("⚠️ Zaten aktif bir vardiya var! Önce vardiyayı bitirmelisiniz.");
+            alert("⚠️ A shift is already active! Please end your current shift first.");
             return;
         }
 
@@ -158,7 +162,7 @@ function WorkerPanel() {
 
     const handleClockOut = async () => {
         if (!shiftActive) {
-            alert("⚠️ Aktif bir vardiya yok!");
+            alert("⚠️ No active shift found!");
             return;
         }
 
@@ -241,7 +245,7 @@ function WorkerPanel() {
                         className="clock-btn clock-in"
                         onClick={handleClockIn}
                         disabled={txLoading || shiftActive}
-                        title={shiftActive ? "Zaten aktif bir vardiya var" : "Vardiya başlat"}
+                        title={shiftActive ? "A shift is already active" : "Start shift"}
                     >
                         🕐 Start Shift
                     </button>
@@ -249,18 +253,18 @@ function WorkerPanel() {
                         className="clock-btn clock-out"
                         onClick={handleClockOut}
                         disabled={txLoading || !shiftActive}
-                        title={!shiftActive ? "Aktif vardiya yok" : "Vardiyayı bitir"}
+                        title={!shiftActive ? "No active shift" : "End shift"}
                     >
                         🕐 End Shift
                     </button>
                     <button className="prod-btn" onClick={handleIncreaseProduction} disabled={!shiftActive || txLoading}>
-                        ➕ Ürün Ekle
+                        ➕ Add Product
                     </button>
                     <button className="door-btn door-entry" onClick={handleDoorEntry}>
-                        🚪 Giriş
+                        🚪 Entry
                     </button>
                     <button className="door-btn door-exit" onClick={handleDoorExit}>
-                        🚪 Çıkış
+                        🚪 Exit
                     </button>
                 </div>
             </div>
@@ -273,6 +277,9 @@ function WorkerPanel() {
                 </button>
                 <button className={activeTab === "activity" ? "tab-active" : ""} onClick={() => setActiveTab("activity")}>
                     📊 Activities
+                </button>
+                <button className={activeTab === "awards" ? "tab-active" : ""} onClick={() => setActiveTab("awards")}>
+                    🏆 Awards ({totalAwardPoints})
                 </button>
             </div>
 
@@ -437,6 +444,79 @@ function WorkerPanel() {
                                 )}
                             </div>
                         </div>
+                    </div>
+                )}
+
+                {activeTab === "awards" && (
+                    <div className="tab-content">
+                        <div className="award-summary">
+                            <div className="award-stats">
+                                <div className="stat-card">
+                                    <span className="stat-label">Total Points</span>
+                                    <span className="stat-value">{totalAwardPoints}</span>
+                                </div>
+                                <div className="stat-card">
+                                    <span className="stat-label">Awards Received</span>
+                                    <span className="stat-value">{awardHistory.length}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="activity-card">
+                            <h3>🏆 Award History</h3>
+                            <div className="activity-list">
+                                {awardHistory.length === 0 ? (
+                                    <p className="no-data">No awards yet. Keep up the good work! 💪</p>
+                                ) : (
+                                    awardHistory.map((award: any, i: number) => {
+                                        const awardType =
+                                            typeof award.award_type === "string"
+                                                ? award.award_type
+                                                : new TextDecoder().decode(new Uint8Array(award.award_type));
+                                        const description =
+                                            typeof award.description === "string"
+                                                ? award.description
+                                                : new TextDecoder().decode(new Uint8Array(award.description));
+
+                                        return (
+                                            <div key={i} className="award-item">
+                                                <div className="award-icon">🏅</div>
+                                                <div className="award-details">
+                                                    <span className="award-type">{awardType}</span>
+                                                    <span className="award-description">{description}</span>
+                                                    <span className="award-date">{new Date(Number(award.timestamp_ms)).toLocaleString("tr-TR")}</span>
+                                                </div>
+                                                <span className="award-points">+{award.points}</span>
+                                            </div>
+                                        );
+                                    })
+                                )}
+                            </div>
+                        </div>
+
+                        {awardEvents.length > 0 && (
+                            <div className="activity-card">
+                                <h3>📢 Recent Award Events</h3>
+                                <div className="activity-list">
+                                    {awardEvents.slice(0, 10).map((event, i) => {
+                                        const data = event.parsedJson as any;
+                                        const awardType =
+                                            typeof data.award_type === "string" ? data.award_type : new TextDecoder().decode(new Uint8Array(data.award_type));
+
+                                        return (
+                                            <div key={i} className="activity-item">
+                                                <span className="activity-icon">🎁</span>
+                                                <div className="activity-details">
+                                                    <span className="activity-title">{awardType}</span>
+                                                    <span className="activity-subtitle">Points: {data.points}</span>
+                                                    <span className="activity-time">{new Date(Number(data.timestamp_ms)).toLocaleString("tr-TR")}</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
