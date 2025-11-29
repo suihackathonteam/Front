@@ -3,63 +3,62 @@ import './Home.css'
 function Home() {
   return (
     <div className="home-container">
-      {/* Main Content */}
       <main className="main-content">
         <div className="hero-section">
-          <h1>Personel Takip Sistemi</h1>
-          <p className="hero-subtitle">Kartlı giriş sistemi ile çalışan aktivitelerini izleyin, verimlilik analizleri yapın</p>
+          <h1>Personnel Tracking System</h1>
+          <p className="hero-subtitle">Monitor employee activities with card access system, perform productivity analysis</p>
           
           <div className="features-grid">
             <div className="feature-box">
               <div className="feature-icon">🔐</div>
-              <h3>Kartlı Giriş</h3>
-              <p>RFID kart okuyucu ile hızlı ve güvenli personel giriş-çıkış takibi</p>
+              <h3>Card Access</h3>
+              <p>Fast and secure personnel entry-exit tracking with RFID card reader</p>
             </div>
             <div className="feature-box">
               <div className="feature-icon">⏱️</div>
-              <h3>Zaman Takibi</h3>
-              <p>Detaylı çalışma saatleri, mesai ve aktif süre analizi</p>
+              <h3>Time Tracking</h3>
+              <p>Detailed working hours, shift and active time analysis</p>
             </div>
             <div className="feature-box">
               <div className="feature-icon">📊</div>
-              <h3>Gerçek Zamanlı Raporlar</h3>
-              <p>Anlık personel durumu, departman bazlı istatistikler ve grafikler</p>
+              <h3>Real-Time Reports</h3>
+              <p>Instant personnel status, department-based statistics and charts</p>
             </div>
             <div className="feature-box">
               <div className="feature-icon">📈</div>
-              <h3>Verimlilik Analizi</h3>
-              <p>Bireysel ve takım performans metrikleri, hedef takibi</p>
+              <h3>Productivity Analysis</h3>
+              <p>Individual and team performance metrics, goal tracking</p>
             </div>
           </div>
         </div>
         <div className="info-section">
-          <h2>Sistem Özellikleri</h2>
+          <h2>System Features</h2>
           <div className="info-grid">
             <div className="info-card">
-              <h4>🎯 Kapsamlı Takip</h4>
+              <h4>🎯 Comprehensive Tracking</h4>
               <ul>
-                <li>Kart basma ile otomatik giriş kaydı</li>
-                <li>Gerçek zamanlı lokasyon bilgisi</li>
-                <li>Departman bazlı aktivite izleme</li>
-                <li>Haftalık ve aylık çalışma raporları</li>
+                <li>Automatic entry recording with card tap</li>
+                <li>Real-time location information</li>
+                <li>Department-based activity monitoring</li>
+                <li>Weekly and monthly work reports</li>
               </ul>
             </div>
             <div className="info-card">
-              <h4>📱 Kolay Yönetim</h4>
+              <h4>📱 Easy Management</h4>
               <ul>
-                <li>Web tabanlı yönetim paneli</li>
-                <li>Mobil uyumlu arayüz</li>
-                <li>Otomatik bildirimler</li>
-                <li>Esnek rapor çıktıları</li>
+                <li>Web-based management panel</li>
+                <li>Mobile-friendly interface</li>
+                <li>Automatic notifications</li>
+                <li>Flexible report outputs</li>
               </ul>
             </div>
             <div className="info-card">
-              <h4>🔒 Güvenlik</h4>
+              <h4>🔒 Security</h4>
               <ul>
-                <li>Blockchain tabanlı veri güvenliği</li>
-                <li>Sui ağı entegrasyonu</li>
-                <li>Şifreli veri aktarımı</li>
-                <li>Yetkilendirme sistemi</li>
+                <li>Blockchain-based data security</li>
+                <li>Sui network integration</li>
+                <li>Encrypted data transmission</li>
+                <li>Authorization system</li>
               </ul>
             </div>
           </div>

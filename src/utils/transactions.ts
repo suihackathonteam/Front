@@ -1,6 +1,6 @@
 /**
- * Sui Transaction Builder Fonksiyonları
- * Smart contract ile etkileşim için transaction builder'lar
+ * Sui Transaction Builder Functions
+ * Transaction builders for interacting with the smart contract
  */
 
 import { Transaction } from '@mysten/sui/transactions'
@@ -20,7 +20,7 @@ import type {
 } from '../types/identity'
 
 /**
- * Text'i UTF-8 byte array'e çevir
+ * Convert text to a UTF-8 byte array
  */
 function stringToBytes(str: string): number[] {
   return Array.from(new TextEncoder().encode(str))
@@ -29,7 +29,7 @@ function stringToBytes(str: string): number[] {
 // ============ Admin Functions ============
 
 /**
- * Yeni worker card oluştur
+ * Create a new worker card
  */
 export function buildIssueWorkerCardTx(
   adminCapId: string,
@@ -52,14 +52,15 @@ export function buildIssueWorkerCardTx(
 }
 
 /**
- * Yeni kapı kaydet
+ * Register a new door
  */
-export function buildRegisterDoorTx(form: RegisterDoorForm): Transaction {
+export function buildRegisterDoorTx(adminCapId: string, form: RegisterDoorForm): Transaction {
   const tx = new Transaction()
   
   tx.moveCall({
     target: `${getModuleId()}::register_door`,
     arguments: [
+      tx.object(adminCapId),
       tx.object(CONTRACT_CONFIG.SYSTEM_REGISTRY_ID),
       tx.pure.vector('u8', stringToBytes(form.name)),
       tx.pure.vector('u8', stringToBytes(form.location)),
@@ -70,14 +71,15 @@ export function buildRegisterDoorTx(form: RegisterDoorForm): Transaction {
 }
 
 /**
- * Yeni makine/kaynak kaydet
+ * Register a new machine/resource
  */
-export function buildRegisterMachineTx(form: RegisterMachineForm): Transaction {
+export function buildRegisterMachineTx(adminCapId: string, form: RegisterMachineForm): Transaction {
   const tx = new Transaction()
   
   tx.moveCall({
     target: `${getModuleId()}::register_machine`,
     arguments: [
+      tx.object(adminCapId),
       tx.object(CONTRACT_CONFIG.SYSTEM_REGISTRY_ID),
       tx.pure.vector('u8', stringToBytes(form.name)),
       tx.pure.vector('u8', stringToBytes(form.machine_type)),
@@ -88,7 +90,7 @@ export function buildRegisterMachineTx(form: RegisterMachineForm): Transaction {
 }
 
 /**
- * Ödül ver
+ * Issue an award
  */
 export function buildIssueAwardTx(
   adminCapId: string,
@@ -102,6 +104,7 @@ export function buildIssueAwardTx(
     arguments: [
       tx.object(adminCapId),
       tx.object(workerCardId),
+      tx.object(CONTRACT_CONFIG.SYSTEM_REGISTRY_ID),
       tx.pure.vector('u8', stringToBytes(form.award_type)),
       tx.pure.u64(form.points),
       tx.pure.vector('u8', stringToBytes(form.description)),
@@ -114,7 +117,7 @@ export function buildIssueAwardTx(
 // ============ Worker Functions ============
 
 /**
- * Kapı geçişi kaydet
+ * Record a door access event
  */
 export function buildRecordDoorAccessTx(
   workerCardId: string,
@@ -137,7 +140,7 @@ export function buildRecordDoorAccessTx(
 }
 
 /**
- * Makine kullanımı kaydet
+ * Record machine usage
  */
 export function buildRecordMachineUsageTx(
   workerCardId: string,
@@ -161,10 +164,11 @@ export function buildRecordMachineUsageTx(
 }
 
 /**
- * Mesai giriş/çıkış
+ * Clock in / clock out (work shifts)
  */
 export function buildClockInOutTx(
   workerCardId: string,
+  registryId: string,
   actionType: number // 0 = clock in, 1 = clock out
 ): Transaction {
   const tx = new Transaction()
@@ -173,6 +177,7 @@ export function buildClockInOutTx(
     target: `${getModuleId()}::clock_in_out`,
     arguments: [
       tx.object(workerCardId),
+      tx.object(registryId),
       tx.pure.u8(actionType),
     ],
   })
@@ -183,7 +188,7 @@ export function buildClockInOutTx(
 // ============ View Functions ============
 
 /**
- * Worker stats getir (view fonksiyon)
+ * Get worker stats (view function)
  */
 export function buildGetWorkerStatsTx(workerCardId: string): Transaction {
   const tx = new Transaction()
@@ -197,7 +202,7 @@ export function buildGetWorkerStatsTx(workerCardId: string): Transaction {
 }
 
 /**
- * Worker bilgilerini getir (view fonksiyon)
+ * Get worker information (view function)
  */
 export function buildGetWorkerInfoTx(workerCardId: string): Transaction {
   const tx = new Transaction()
@@ -211,7 +216,7 @@ export function buildGetWorkerInfoTx(workerCardId: string): Transaction {
 }
 
 /**
- * Kapı bilgilerini getir
+ * Get door information
  */
 export function buildGetDoorTx(doorId: number): Transaction {
   const tx = new Transaction()
@@ -228,7 +233,7 @@ export function buildGetDoorTx(doorId: number): Transaction {
 }
 
 /**
- * Makine bilgilerini getir
+ * Get machine information
  */
 export function buildGetMachineTx(machineId: number): Transaction {
   const tx = new Transaction()
@@ -247,7 +252,7 @@ export function buildGetMachineTx(machineId: number): Transaction {
 // ============ Update Functions ============
 
 /**
- * Worker Card bilgilerini güncelle
+ * Update worker card information
  */
 export function buildUpdateWorkerCardTx(
   adminCapId: string,
@@ -270,7 +275,7 @@ export function buildUpdateWorkerCardTx(
 }
 
 /**
- * Kapı bilgilerini güncelle
+ * Update door information
  */
 export function buildUpdateDoorTx(
   adminCapId: string,
@@ -294,7 +299,7 @@ export function buildUpdateDoorTx(
 }
 
 /**
- * Makine bilgilerini güncelle
+ * Update machine information
  */
 export function buildUpdateMachineTx(
   adminCapId: string,
@@ -320,7 +325,7 @@ export function buildUpdateMachineTx(
 // ============ Activate/Deactivate Functions ============
 
 /**
- * Worker Card'ı devre dışı bırak
+ * Deactivate a worker card
  */
 export function buildDeactivateWorkerCardTx(
   adminCapId: string,
@@ -340,7 +345,7 @@ export function buildDeactivateWorkerCardTx(
 }
 
 /**
- * Worker Card'ı aktif et
+ * Activate a worker card
  */
 export function buildActivateWorkerCardTx(
   adminCapId: string,
@@ -360,7 +365,7 @@ export function buildActivateWorkerCardTx(
 }
 
 /**
- * Kapıyı devre dışı bırak
+ * Deactivate a door
  */
 export function buildDeactivateDoorTx(
   adminCapId: string,
@@ -381,7 +386,7 @@ export function buildDeactivateDoorTx(
 }
 
 /**
- * Kapıyı aktif et
+ * Activate a door
  */
 export function buildActivateDoorTx(
   adminCapId: string,
@@ -402,7 +407,7 @@ export function buildActivateDoorTx(
 }
 
 /**
- * Makineyi devre dışı bırak
+ * Deactivate a machine
  */
 export function buildDeactivateMachineTx(
   adminCapId: string,
@@ -423,7 +428,7 @@ export function buildDeactivateMachineTx(
 }
 
 /**
- * Makineyi aktif et
+ * Activate a machine
  */
 export function buildActivateMachineTx(
   adminCapId: string,
@@ -446,7 +451,7 @@ export function buildActivateMachineTx(
 // ============ Batch Operations ============
 
 /**
- * Toplu kapı kaydı
+ * Batch register doors
  */
 export function buildBatchRegisterDoorsTx(
   adminCapId: string,
@@ -471,7 +476,7 @@ export function buildBatchRegisterDoorsTx(
 }
 
 /**
- * Toplu makine kaydı
+ * Batch register machines
  */
 export function buildBatchRegisterMachinesTx(
   adminCapId: string,
@@ -496,7 +501,7 @@ export function buildBatchRegisterMachinesTx(
 }
 
 /**
- * Toplu worker card oluştur
+ * Batch issue worker cards
  */
 export function buildBatchIssueWorkerCardsTx(
   adminCapId: string,
@@ -523,7 +528,27 @@ export function buildBatchIssueWorkerCardsTx(
 }
 
 /**
- * AdminCap transfer et (yeni admin oluştur)
+ * Create new admin using add_new_admin function
+ */
+export function buildAddNewAdminTx(
+  adminCapId: string,
+  newAdminAddress: string
+): Transaction {
+  const tx = new Transaction()
+  
+  tx.moveCall({
+    target: `${getModuleId()}::add_new_admin`,
+    arguments: [
+      tx.object(adminCapId),
+      tx.pure.address(newAdminAddress),
+    ],
+  })
+  
+  return tx
+}
+
+/**
+ * Transfer AdminCap (assign new admin) - transfers ownership
  */
 export function buildTransferAdminCapTx(
   adminCapId: string,

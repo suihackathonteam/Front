@@ -2,22 +2,22 @@ import './Dashboard.css'
 
 function Services() {
   const services = [
-    { icon: '🔐', title: 'Kartlı Giriş Sistemi', description: 'RFID kart okuyucu ile hızlı ve güvenli personel giriş-çıkış takibi', features: ['Otomatik kayıt', 'Hızlı geçiş', 'Güvenli doğrulama', 'Çoklu kapı desteği'] },
-    { icon: '⏱️', title: 'Zaman Yönetimi', description: 'Detaylı çalışma saatleri, mesai ve aktif süre analizi', features: ['Mesai takibi', 'Fazla mesai hesabı', 'İzin yönetimi', 'Vardiya planlama'] },
-    { icon: '📊', title: 'Raporlama ve Analiz', description: 'Anlık personel durumu, departman bazlı istatistikler ve grafikler', features: ['Günlük raporlar', 'Haftalık analizler', 'Aylık özetler', 'Excel çıktıları'] },
-    { icon: '📈', title: 'Verimlilik Takibi', description: 'Bireysel ve takım performans metrikleri, hedef takibi', features: ['KPI takibi', 'Hedef belirleme', 'Performans analizi', 'Karşılaştırmalar'] },
-    { icon: '⚙️', title: 'Makine Yönetimi', description: 'Makine ve kaynak kullanım takibi, verimlilik analizi', features: ['Kullanım süreleri', 'Üretim takibi', 'Bakım planları', 'Verimlilik oranları'] },
-    { icon: '🏆', title: 'Ödül Sistemi', description: 'Gamification ile çalışan motivasyonu artırma', features: ['Puan sistemi', 'Başarı rozetleri', 'Sıralama tablosu', 'Teşvik programı'] },
-    { icon: '🔔', title: 'Bildirim Sistemi', description: 'Önemli olaylar için anında bildirimler', features: ['Giriş/Çıkış bildirimleri', 'Mesai uyarıları', 'Hedef bildirimleri', 'Sistem uyarıları'] },
-    { icon: '🌐', title: 'Web3 Entegrasyonu', description: 'Blockchain tabanlı güvenli veri yönetimi', features: ['Sui blockchain', 'Kripto cüzdan', 'Değiştirilemez kayıtlar', 'Akıllı sözleşmeler'] }
+    { icon: '🔐', title: 'Card Access System', description: 'Fast and secure personnel entry-exit tracking with RFID card reader', features: ['Automatic registration', 'Fast passage', 'Secure verification', 'Multiple door support'] },
+    { icon: '⏱️', title: 'Time Management', description: 'Detailed working hours, shift and active time analysis', features: ['Shift tracking', 'Overtime calculation', 'Leave management', 'Shift planning'] },
+    { icon: '📊', title: 'Reporting and Analysis', description: 'Instant personnel status, department-based statistics and charts', features: ['Daily reports', 'Weekly analysis', 'Monthly summaries', 'Excel exports'] },
+    { icon: '📈', title: 'Productivity Tracking', description: 'Individual and team performance metrics, goal tracking', features: ['KPI tracking', 'Goal setting', 'Performance analysis', 'Comparisons'] },
+    { icon: '⚙️', title: 'Machine Management', description: 'Machine and resource usage tracking, efficiency analysis', features: ['Usage times', 'Production tracking', 'Maintenance schedules', 'Efficiency rates'] },
+    { icon: '🏆', title: 'Reward System', description: 'Increase employee motivation with gamification', features: ['Point system', 'Achievement badges', 'Leaderboard', 'Incentive program'] },
+    { icon: '🔔', title: 'Notification System', description: 'Instant notifications for important events', features: ['Entry/Exit notifications', 'Shift alerts', 'Goal notifications', 'System alerts'] },
+    { icon: '🌐', title: 'Web3 Integration', description: 'Blockchain-based secure data management', features: ['Sui blockchain', 'Crypto wallet', 'Immutable records', 'Smart contracts'] }
   ]
 
   return (
     <div className="dashboard-main">
       <div className="dashboard-content">
         <div className="content-header">
-          <h1>Hizmetlerimiz</h1>
-          <p>TeamPro ile sunduğumuz kapsamlı çözümler</p>
+          <h1>Our Services</h1>
+          <p>Comprehensive solutions we offer with TeamPro</p>
         </div>
 
         <div className="services-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', marginTop: '24px' }}>
@@ -36,40 +36,40 @@ function Services() {
         </div>
 
         <div className="chart-card full-width" style={{ marginTop: '32px' }}>
-          <h2>📋 Paket Seçenekleri</h2>
+          <h2>📋 Package Options</h2>
           <div className="stats-grid">
             <div className="stat-card" style={{ flexDirection: 'column', alignItems: 'flex-start', padding: '24px' }}>
               <h3 style={{ color: '#667eea' }}>Basic</h3>
-              <div style={{ fontSize: '2em', margin: '16px 0' }}>₺999<span style={{ fontSize: '0.5em', opacity: 0.7 }}>/ay</span></div>
+              <div style={{ fontSize: '2em', margin: '16px 0' }}>$99<span style={{ fontSize: '0.5em', opacity: 0.7 }}>/mo</span></div>
               <ul style={{ listStyle: 'none', padding: 0, width: '100%' }}>
-                <li>✓ 50 Personel</li>
-                <li>✓ Temel Raporlar</li>
-                <li>✓ 3 Kapı Girişi</li>
-                <li>✓ Email Destek</li>
+                <li>✓ 50 Personnel</li>
+                <li>✓ Basic Reports</li>
+                <li>✓ 3 Door Access</li>
+                <li>✓ Email Support</li>
               </ul>
             </div>
 
             <div className="stat-card" style={{ flexDirection: 'column', alignItems: 'flex-start', padding: '24px', border: '2px solid #667eea' }}>
               <h3 style={{ color: '#667eea' }}>Pro ⭐</h3>
-              <div style={{ fontSize: '2em', margin: '16px 0' }}>₺1999<span style={{ fontSize: '0.5em', opacity: 0.7 }}>/ay</span></div>
+              <div style={{ fontSize: '2em', margin: '16px 0' }}>$199<span style={{ fontSize: '0.5em', opacity: 0.7 }}>/mo</span></div>
               <ul style={{ listStyle: 'none', padding: 0, width: '100%' }}>
-                <li>✓ 200 Personel</li>
-                <li>✓ Tüm Raporlar</li>
-                <li>✓ Sınırsız Kapı</li>
-                <li>✓ Öncelikli Destek</li>
-                <li>✓ Ödül Sistemi</li>
+                <li>✓ 200 Personnel</li>
+                <li>✓ All Reports</li>
+                <li>✓ Unlimited Doors</li>
+                <li>✓ Priority Support</li>
+                <li>✓ Reward System</li>
               </ul>
             </div>
 
             <div className="stat-card" style={{ flexDirection: 'column', alignItems: 'flex-start', padding: '24px' }}>
               <h3 style={{ color: '#667eea' }}>Enterprise</h3>
-              <div style={{ fontSize: '2em', margin: '16px 0' }}>Özel Fiyat</div>
+              <div style={{ fontSize: '2em', margin: '16px 0' }}>Custom Price</div>
               <ul style={{ listStyle: 'none', padding: 0, width: '100%' }}>
-                <li>✓ Sınırsız Personel</li>
-                <li>✓ Özel Entegrasyonlar</li>
-                <li>✓ Özel Geliştirme</li>
-                <li>✓ 7/24 Destek</li>
-                <li>✓ Eğitim & Danışmanlık</li>
+                <li>✓ Unlimited Personnel</li>
+                <li>✓ Custom Integrations</li>
+                <li>✓ Custom Development</li>
+                <li>✓ 24/7 Support</li>
+                <li>✓ Training & Consulting</li>
               </ul>
             </div>
           </div>

@@ -1,6 +1,6 @@
 /**
- * Custom Hooks for Identity System
- * Blockchain ile etkileşim için React hooks
+ * Custom Hooks for the Identity System
+ * React hooks for interacting with the blockchain
  */
 
 import { useCurrentAccount, useSignAndExecuteTransaction, useSuiClient } from '@mysten/dapp-kit'
@@ -10,7 +10,7 @@ import { CONTRACT_CONFIG } from '../config/contracts'
 import type { WorkerCard, Door, Machine } from '../types/identity'
 
 /**
- * Worker Card hook - Kullanıcının worker card'ını getirir
+ * Worker Card hook - retrieves the user's worker card
  */
 export function useWorkerCard() {
   const account = useCurrentAccount()
@@ -31,7 +31,7 @@ export function useWorkerCard() {
         setLoading(true)
         setError(null)
 
-        // Kullanıcının sahip olduğu objeleri getir
+        // Fetch objects owned by the user
         const objects = await client.getOwnedObjects({
           owner: account.address,
           filter: {
@@ -47,7 +47,7 @@ export function useWorkerCard() {
           if (cardData.content && cardData.content.dataType === 'moveObject') {
             const fields = cardData.content.fields as any
             
-            // Byte array'leri string'e çevir
+            // Convert byte arrays to strings
             const decoder = new TextDecoder()
             
             setWorkerCard({
@@ -81,7 +81,7 @@ export function useWorkerCard() {
 }
 
 /**
- * Admin Cap hook - Kullanıcının admin yetkisi olup olmadığını kontrol eder
+ * Admin Cap hook - checks whether the user has admin privileges
  */
 export function useAdminCap() {
   const account = useCurrentAccount()
@@ -132,7 +132,7 @@ export function useAdminCap() {
 }
 
 /**
- * Transaction hook - Transaction gönderme
+ * Transaction hook - sending transactions
  */
 export function useIdentityTransaction() {
   const { mutate: signAndExecute } = useSignAndExecuteTransaction()
@@ -169,7 +169,7 @@ export function useIdentityTransaction() {
 }
 
 /**
- * Doors listesi hook
+ * Doors list hook
  */
 export function useDoors() {
   const client = useSuiClient()
@@ -180,18 +180,15 @@ export function useDoors() {
     const fetchDoors = async () => {
       try {
         setLoading(true)
-        // SystemRegistry'den kapıları çek
+        // Fetch doors from the SystemRegistry
         const registry = await client.getObject({
           id: CONTRACT_CONFIG.SYSTEM_REGISTRY_ID,
           options: { showContent: true },
         })
 
         if (registry.data?.content && registry.data.content.dataType === 'moveObject') {
-          const fields = registry.data.content.fields as any
-          const doorsTable = fields.doors
-          
-          // Table'dan door'ları parse et (bu kısım indexer ile kolaylaştırılabilir)
-          // Şimdilik boş döndürüyoruz, indexer entegrasyonu gerekli
+          // Parse doors from the table (this can be simplified using an indexer)
+          // For now return an empty array; indexer integration is required
           setDoors([])
         }
       } catch (err) {
@@ -208,7 +205,7 @@ export function useDoors() {
 }
 
 /**
- * Machines listesi hook
+ * Machines list hook
  */
 export function useMachines() {
   const client = useSuiClient()
@@ -219,17 +216,14 @@ export function useMachines() {
     const fetchMachines = async () => {
       try {
         setLoading(true)
-        // SystemRegistry'den makineleri çek
+        // Fetch machines from the SystemRegistry
         const registry = await client.getObject({
           id: CONTRACT_CONFIG.SYSTEM_REGISTRY_ID,
           options: { showContent: true },
         })
 
         if (registry.data?.content && registry.data.content.dataType === 'moveObject') {
-          const fields = registry.data.content.fields as any
-          const machinesTable = fields.machines
-          
-          // Table'dan machine'leri parse et (indexer ile kolaylaştırılabilir)
+          // Parse machines from the table (can be simplified with an indexer)
           setMachines([])
         }
       } catch (err) {
@@ -246,7 +240,7 @@ export function useMachines() {
 }
 
 /**
- * Events hook - Blockchain event'lerini dinle
+ * Events hook - listen to blockchain events
  */
 export function useIdentityEvents(eventType?: string) {
   const client = useSuiClient()
@@ -258,20 +252,43 @@ export function useIdentityEvents(eventType?: string) {
       try {
         setLoading(true)
         
-        // Event'leri query et
-        const eventQuery = await client.queryEvents({
-          query: {
-            MoveEventType: eventType 
-              ? `${CONTRACT_CONFIG.PACKAGE_ID}::identity::${eventType}`
-              : `${CONTRACT_CONFIG.PACKAGE_ID}::identity`,
-          },
-          limit: 50,
-          order: 'descending',
-        })
-
-        setEvents(eventQuery.data)
+        if (eventType) {
+          // Query specific event type
+          const eventQuery = await client.queryEvents({
+            query: {
+              MoveEventType: `${CONTRACT_CONFIG.PACKAGE_ID}::identity::${eventType}`
+            },
+            limit: 50,
+            order: 'descending',
+          })
+          setEvents(eventQuery.data)
+        } else {
+          // Query all event types
+          const eventTypes = ['DoorAccessEvent', 'MachineUsageEvent', 'ClockEvent', 'AwardEvent']
+          const allEvents: any[] = []
+          
+          for (const type of eventTypes) {
+            try {
+              const eventQuery = await client.queryEvents({
+                query: {
+                  MoveEventType: `${CONTRACT_CONFIG.PACKAGE_ID}::identity::${type}`
+                },
+                limit: 50,
+                order: 'descending',
+              })
+              allEvents.push(...eventQuery.data)
+            } catch (err) {
+              console.warn(`${type} event fetch error:`, err)
+            }
+          }
+          
+          // Sort by timestamp descending
+          allEvents.sort((a, b) => Number(b.timestampMs) - Number(a.timestampMs))
+          setEvents(allEvents)
+        }
       } catch (err) {
         console.error('Events getirme hatası:', err)
+        setEvents([])
       } finally {
         setLoading(false)
       }
@@ -279,7 +296,7 @@ export function useIdentityEvents(eventType?: string) {
 
     fetchEvents()
     
-    // Her 10 saniyede bir güncelle
+    // Refresh every 10 seconds
     const interval = setInterval(fetchEvents, 10000)
     return () => clearInterval(interval)
   }, [client, eventType])

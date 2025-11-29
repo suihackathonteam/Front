@@ -387,6 +387,11 @@
   color: #f093fb;
 }
 
+.verimlilik-badge.low {
+  background: rgba(255, 107, 107, 0.2);
+  color: #ff6b6b;
+}
+
 /* Awards Section */
 .awards-grid {
   display: grid;
@@ -1035,4 +1040,10 @@
   .employee-table td:nth-child(6) {
     display: none;
   }
+}
+
+/* Spinner animation */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }

@@ -1,23 +1,16 @@
-/**
- * Identity System Türleri
- * Smart contract yapılarını TypeScript'e çevirir
- */
-
-// Worker Card yapısı
 export interface WorkerCard {
-  id: string // Object ID
+  id: string
   worker_address: string
   card_number: string
   name: string
   department: string
-  is_active: boolean // Card active status
-  total_work_hours: number // milliseconds
+  is_active: boolean
+  total_work_hours: number
   total_production: number
   efficiency_score: number
   last_checkpoint_hash: number[]
 }
 
-// Door yapısı
 export interface Door {
   door_id: number
   name: string
@@ -25,7 +18,6 @@ export interface Door {
   is_active: boolean
 }
 
-// Machine yapısı
 export interface Machine {
   machine_id: number
   name: string
@@ -33,13 +25,12 @@ export interface Machine {
   is_active: boolean
 }
 
-// Event türleri
 export interface DoorAccessEvent {
   worker_address: string
   card_number: string
   door_id: number
   door_name: string
-  access_type: number // 0 = entry, 1 = exit
+  access_type: number
   timestamp_ms: number
 }
 
@@ -57,7 +48,7 @@ export interface MachineUsageEvent {
 export interface ClockEvent {
   worker_address: string
   card_number: string
-  action_type: number // 0 = clock in, 1 = clock out
+  action_type: number
   timestamp_ms: number
 }
 
@@ -78,8 +69,6 @@ export interface StatsUpdateEvent {
   checkpoint_hash: number[]
   timestamp_ms: number
 }
-
-// UI için formlar
 export interface RegisterDoorForm {
   name: string
   location: string
@@ -142,7 +131,6 @@ export interface BatchIssueWorkerCardsForm {
   departments: string[]
 }
 
-// Dashboard için işlenmiş veri türleri
 export interface WorkerStats {
   address: string
   name: string

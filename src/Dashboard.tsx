@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import './Dashboard.css'
-import { useCurrentAccount } from '@mysten/dapp-kit'
+import { useCurrentAccount, useSuiClient } from '@mysten/dapp-kit'
 import SuiConnectButton from './SuiConnectButton'
 import { useIdentityEvents } from './hooks/useIdentity'
 
@@ -9,14 +9,13 @@ function Dashboard() {
   const [selectedView, setSelectedView] = useState('overview')
   const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null)
   const currentAccount = useCurrentAccount()
+  const client = useSuiClient()
 
-  // Blockchain'den event'leri çek
-  const { events: allEvents } = useIdentityEvents()
+  const { events: allEvents, loading: eventsLoading } = useIdentityEvents()
   
-  // State'ler
   const [workerCards, setWorkerCards] = useState<any[]>([])
+  const [loadingCards, setLoadingCards] = useState(true)
 
-  // Event'lerden verileri parse et
   const parsedEvents = useMemo(() => {
     const doorEvents: any[] = []
     const machineEvents: any[] = []
@@ -24,105 +23,156 @@ function Dashboard() {
     const awardEvents: any[] = []
 
     allEvents.forEach((event) => {
-      const eventType = event.type.split('::').pop()
-      const parsedJson = event.parsedJson
+      try {
+        const eventType = event.type.split('::').pop()
+        const parsedJson = event.parsedJson
 
-      if (eventType === 'DoorAccessEvent') {
-        doorEvents.push({
-          worker_address: parsedJson.worker_address,
-          door_id: parsedJson.door_id,
-          timestamp: new Date(Number(parsedJson.timestamp)),
-          is_entry: parsedJson.is_entry,
-        })
-      } else if (eventType === 'MachineUsageEvent') {
-        machineEvents.push({
-          worker_address: parsedJson.worker_address,
-          machine_id: parsedJson.machine_id,
-          timestamp: new Date(Number(parsedJson.timestamp)),
-          duration: Number(parsedJson.duration),
-          production_count: Number(parsedJson.production_count),
-        })
-      } else if (eventType === 'ClockEvent') {
-        clockEvents.push({
-          worker_address: parsedJson.worker_address,
-          timestamp: new Date(Number(parsedJson.timestamp)),
-          action_type: Number(parsedJson.action_type),
-        })
-      } else if (eventType === 'AwardEvent') {
-        awardEvents.push({
-          worker_address: parsedJson.worker_address,
-          award_type: parsedJson.award_type,
-          points: Number(parsedJson.points),
-          timestamp: new Date(Number(parsedJson.timestamp)),
-        })
+        if (eventType === 'DoorAccessEvent') {
+          doorEvents.push({
+            worker_address: parsedJson.worker_address,
+            card_number: parsedJson.card_number,
+            door_id: Number(parsedJson.door_id),
+            door_name: parsedJson.door_name,
+            access_type: Number(parsedJson.access_type),
+            timestamp: new Date(Number(parsedJson.timestamp_ms)),
+            is_entry: Number(parsedJson.access_type) === 2, // 2 = entry, 3 = exit
+          })
+        } else if (eventType === 'MachineUsageEvent') {
+          machineEvents.push({
+            worker_address: parsedJson.worker_address,
+            card_number: parsedJson.card_number,
+            machine_id: Number(parsedJson.machine_id),
+            machine_name: parsedJson.machine_name,
+            timestamp: new Date(Number(parsedJson.timestamp_ms)),
+            duration: Number(parsedJson.usage_duration_ms),
+            production_count: Number(parsedJson.production_count),
+            efficiency: Number(parsedJson.efficiency_percentage),
+          })
+        } else if (eventType === 'ClockEvent') {
+          clockEvents.push({
+            worker_address: parsedJson.worker_address,
+            card_number: parsedJson.card_number,
+            timestamp: new Date(Number(parsedJson.timestamp_ms)),
+            action_type: Number(parsedJson.action_type),
+          })
+        } else if (eventType === 'AwardEvent') {
+          awardEvents.push({
+            worker_address: parsedJson.worker_address,
+            card_number: parsedJson.card_number,
+            award_type: parsedJson.award_type,
+            points: Number(parsedJson.points),
+            description: parsedJson.description,
+            timestamp: new Date(Number(parsedJson.timestamp_ms)),
+          })
+        }
+      } catch (err) {
+        console.warn('Event parse error:', err, event)
       }
     })
 
     return { doorEvents, machineEvents, clockEvents, awardEvents }
   }, [allEvents])
 
-  // WorkerCard'ları çek
+  // Fetch worker cards from blockchain
   useEffect(() => {
     const fetchWorkerCards = async () => {
+      if (!currentAccount) {
+        setLoadingCards(false)
+        return
+      }
+
       try {
-        // Event'lerden worker_address'leri topluyoruz
-        // Her unique address için bir kart var diyoruz
-        const uniqueAddresses = new Set<string>()
-        parsedEvents.awardEvents.forEach(e => uniqueAddresses.add(e.worker_address))
-        parsedEvents.clockEvents.forEach(e => uniqueAddresses.add(e.worker_address))
-        parsedEvents.doorEvents.forEach(e => uniqueAddresses.add(e.worker_address))
-        parsedEvents.machineEvents.forEach(e => uniqueAddresses.add(e.worker_address))
+        setLoadingCards(true)
+        
+        // For now, build worker cards from events
+        // This is a fallback approach since WorkerCards are not stored in registry
+        const uniqueWorkers = new Map<string, any>()
 
-        // Her adres için istatistikleri hesapla
-        const cards = Array.from(uniqueAddresses).map((address, index) => {
-          const userMachineEvents = parsedEvents.machineEvents.filter(e => e.worker_address === address)
-          const totalProduction = userMachineEvents.reduce((sum, e) => sum + e.production_count, 0)
-          const totalDuration = userMachineEvents.reduce((sum, e) => sum + e.duration, 0)
-          const efficiency = totalProduction > 0 ? Math.min(100, Math.round((totalProduction / Math.max(1, userMachineEvents.length)) * 5)) : 0
+        // Process all events to build worker profiles
+        allEvents.forEach((event) => {
+          try {
+            const parsedJson = event.parsedJson
+            const address = parsedJson.worker_address
+            
+            if (!address) return
 
-          return {
-            id: `card-${index}`,
-            worker_address: address,
-            card_number: `KART-${(index + 1).toString().padStart(4, '0')}`,
-            name: `Çalışan ${index + 1}`,
-            department: userMachineEvents.length > 0 ? userMachineEvents[0].machine_id : 'Genel',
-            is_active: true,
-            total_work_hours: totalDuration,
-            total_production: totalProduction,
-            efficiency_score: efficiency,
+            if (!uniqueWorkers.has(address)) {
+              // Decode card_number and create initial profile
+              let cardNumber = 'N/A'
+              try {
+                if (parsedJson.card_number) {
+                  if (typeof parsedJson.card_number === 'string') {
+                    cardNumber = parsedJson.card_number
+                  } else if (Array.isArray(parsedJson.card_number)) {
+                    cardNumber = new TextDecoder().decode(new Uint8Array(parsedJson.card_number))
+                  }
+                }
+              } catch (e) {
+                console.warn('Card number decode error:', e)
+              }
+
+              uniqueWorkers.set(address, {
+                id: address,
+                worker_address: address,
+                card_number: cardNumber,
+                name: cardNumber,
+                department: 'General',
+                is_active: true,
+                total_work_hours: 0,
+                total_production: 0,
+                efficiency_score: 0,
+                event_count: 0,
+              })
+            }
+
+            const worker = uniqueWorkers.get(address)
+            worker.event_count++
+
+            // Update stats based on event type
+            const eventType = event.type.split('::').pop()
+            if (eventType === 'MachineUsageEvent') {
+              worker.total_work_hours += Number(parsedJson.usage_duration_ms || 0)
+              worker.total_production += Number(parsedJson.production_count || 0)
+              const efficiency = Number(parsedJson.efficiency_percentage || 0)
+              // Calculate weighted average efficiency
+              if (worker.efficiency_score === 0) {
+                worker.efficiency_score = efficiency
+              } else {
+                worker.efficiency_score = Math.round((worker.efficiency_score * 0.7 + efficiency * 0.3))
+              }
+            }
+          } catch (err) {
+            console.warn('Worker profile build error:', err)
           }
         })
 
+        const cards = Array.from(uniqueWorkers.values())
         setWorkerCards(cards)
       } catch (err) {
-        console.error('Worker cards hesaplama hatası:', err)
+        console.error('Worker cards fetch error:', err)
+      } finally {
+        setLoadingCards(false)
       }
     }
 
-    if (currentAccount && allEvents.length > 0) {
-      fetchWorkerCards()
-    }
-  }, [currentAccount, parsedEvents, allEvents.length])
+    fetchWorkerCards()
+  }, [currentAccount, client, allEvents])
 
-  // Not: SystemRegistry'den doors ve machines dinamik olarak çekilebilir
-  // Ancak Table içeriğini okumak için indexer kullanılması önerilir
-
-  // Saatlik kapı geçiş verileri
   const doorAccessData = useMemo(() => {
-    const hourlyData: { [key: string]: { girisler: number; cikislar: number } } = {}
+    const hourlyData: { [key: string]: { entries: number; exits: number } } = {}
 
     parsedEvents.doorEvents.forEach((event) => {
       const hour = event.timestamp.getHours()
       const timeKey = `${hour.toString().padStart(2, '0')}:00`
 
       if (!hourlyData[timeKey]) {
-        hourlyData[timeKey] = { girisler: 0, cikislar: 0 }
+        hourlyData[timeKey] = { entries: 0, exits: 0 }
       }
 
       if (event.is_entry) {
-        hourlyData[timeKey].girisler++
+        hourlyData[timeKey].entries++
       } else {
-        hourlyData[timeKey].cikislar++
+        hourlyData[timeKey].exits++
       }
     })
 
@@ -131,78 +181,119 @@ function Dashboard() {
       .sort((a, b) => a.time.localeCompare(b.time))
   }, [parsedEvents.doorEvents])
 
-  // Makine kullanım verileri
   const machineUsageData = useMemo(() => {
-    const machineStats: { [key: string]: { totalDuration: number; totalProduction: number; count: number } } = {}
+    const machineStats: { [key: string]: { name: string; totalDuration: number; totalProduction: number; count: number; totalEfficiency: number } } = {}
 
     parsedEvents.machineEvents.forEach((event) => {
-      if (!machineStats[event.machine_id]) {
-        machineStats[event.machine_id] = { totalDuration: 0, totalProduction: 0, count: 0 }
+      const machineId = String(event.machine_id)
+      
+      // Decode machine name
+      let machineName = `Machine ${machineId}`
+      try {
+        if (event.machine_name) {
+          if (typeof event.machine_name === 'string') {
+            machineName = event.machine_name
+          } else if (Array.isArray(event.machine_name)) {
+            machineName = new TextDecoder().decode(new Uint8Array(event.machine_name))
+          }
+        }
+      } catch (e) {
+        console.warn('Machine name decode error:', e)
       }
 
-      machineStats[event.machine_id].totalDuration += event.duration
-      machineStats[event.machine_id].totalProduction += event.production_count
-      machineStats[event.machine_id].count++
+      if (!machineStats[machineId]) {
+        machineStats[machineId] = { name: machineName, totalDuration: 0, totalProduction: 0, count: 0, totalEfficiency: 0 }
+      }
+
+      machineStats[machineId].totalDuration += event.duration || 0
+      machineStats[machineId].totalProduction += event.production_count || 0
+      machineStats[machineId].totalEfficiency += event.efficiency || 0
+      machineStats[machineId].count++
     })
 
-    return Object.entries(machineStats).map(([makine, stats]) => ({
-      makine,
-      kullanim: (stats.totalDuration / 3600).toFixed(1), // saniyeden saate
-      urun: stats.totalProduction,
-      verim: stats.count > 0 ? Math.min(100, Math.round((stats.totalProduction / stats.count) * 10)) : 0,
+    return Object.entries(machineStats).map(([_machineId, stats]) => ({
+      machine: stats.name,
+      usage: (stats.totalDuration / (1000 * 3600)).toFixed(1), // Convert ms to hours
+      production: stats.totalProduction,
+      efficiency: stats.count > 0 ? Math.round(stats.totalEfficiency / stats.count) : 0,
     }))
   }, [parsedEvents.machineEvents])
 
-  // Çalışan performans verileri
   const employeeProductivity = useMemo(() => {
     return workerCards.map((card) => ({
       name: card.name,
-      makine: card.department,
-      sure: (card.total_work_hours / 3600).toFixed(1),
-      urun: card.total_production,
-      verim: card.efficiency_score,
+      machine: card.department,
+      duration: (card.total_work_hours / (1000 * 3600)).toFixed(1), // Convert ms to hours
+      production: card.total_production,
+      efficiency: card.efficiency_score,
     }))
   }, [workerCards])
 
-  // Çalışan ödül verileri
   const employeeAwards = useMemo(() => {
     return parsedEvents.awardEvents.slice(0, 4).map((award, index) => {
       const workerCard = workerCards.find((card) => card.worker_address === award.worker_address)
-      const awardTypeText = new TextDecoder().decode(new Uint8Array(award.award_type))
+      
+      // Decode award type
+      let awardTypeText = 'Award'
+      try {
+        if (award.award_type) {
+          if (typeof award.award_type === 'string') {
+            awardTypeText = award.award_type
+          } else if (Array.isArray(award.award_type)) {
+            awardTypeText = new TextDecoder().decode(new Uint8Array(award.award_type))
+          }
+        }
+      } catch (e) {
+        console.warn('Award type decode error:', e)
+      }
+
+      // Decode description
+      let descriptionText = ''
+      try {
+        if (award.description) {
+          if (typeof award.description === 'string') {
+            descriptionText = award.description
+          } else if (Array.isArray(award.description)) {
+            descriptionText = new TextDecoder().decode(new Uint8Array(award.description))
+          }
+        }
+      } catch (e) {
+        console.warn('Description decode error:', e)
+      }
 
       return {
         id: index + 1,
-        calisan: workerCard?.name || award.worker_address.slice(0, 8) + '...',
-        odul: `🏆 ${awardTypeText}`,
-        tarih: award.timestamp.toLocaleDateString('tr-TR'),
-        aciklama: `${award.points} puan ödülü`,
-        puan: award.points,
+        employee: workerCard?.name || award.worker_address.slice(0, 8) + '...',
+        award: `🏆 ${awardTypeText}`,
+        date: award.timestamp.toLocaleDateString('tr-TR'),
+        description: descriptionText || `${award.points} points award`,
+        points: award.points,
       }
     })
   }, [parsedEvents.awardEvents, workerCards])
 
-  // Gerçek zamanlı istatistikler
   const realtimeStats = useMemo(() => {
     const activeWorkers = workerCards.filter((card) => card.is_active).length
     const totalProduction = workerCards.reduce((sum, card) => sum + card.total_production, 0)
-    const avgEfficiency = workerCards.length > 0
-      ? Math.round(workerCards.reduce((sum, card) => sum + card.efficiency_score, 0) / workerCards.length)
-      : 0
+
+    // Count today's door entries
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const todayEntries = parsedEvents.doorEvents.filter(e => e.timestamp >= today && e.is_entry).length
 
     return [
-      { icon: '🚪', title: 'Aktif Personel', value: String(activeWorkers), change: `/${workerCards.length}`, color: '#667eea' },
-      { icon: '⚙️', title: 'Çalışan Makine', value: `${machineUsageData.length}`, change: '100%', color: '#764ba2' },
-      { icon: '📦', title: 'Toplam Üretim', value: String(totalProduction), change: '', color: '#f093fb' },
-      { icon: '🎯', title: 'Ortalama Verimlilik', value: `${avgEfficiency}%`, change: '', color: '#4facfe' },
+      { icon: '👥', title: 'Active Workers', value: String(activeWorkers), change: `Total: ${workerCards.length}`, color: '#667eea' },
+      { icon: '⚙️', title: 'Active Machines', value: `${machineUsageData.length}`, change: `${parsedEvents.machineEvents.length} uses`, color: '#764ba2' },
+      { icon: '📦', title: 'Total Production', value: String(totalProduction), change: `${parsedEvents.machineEvents.length} operations`, color: '#f093fb' },
+      { icon: '🚪', title: 'Today Entries', value: `${todayEntries}`, change: `${parsedEvents.doorEvents.length} total`, color: '#4facfe' },
     ]
-  }, [workerCards, machineUsageData])
+  }, [workerCards, machineUsageData, parsedEvents])
 
 	  if(!currentAccount){
-
 		return (
 			<div className="home-container">
 				<div className="cta-section">
-					<p className="cta-text">Sisteme erişmek için Sui cüzdanınızı bağlayın</p>
+					<p className="cta-text">Connect your Sui wallet to access the system</p>
 					<div className="cta-button">
 						<SuiConnectButton />
 					</div>
@@ -211,21 +302,34 @@ function Dashboard() {
 		)
 	}
 
+  if (eventsLoading || loadingCards) {
+    return (
+      <div className="dashboard-container">
+        <div className="dashboard-main">
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px', flexDirection: 'column', gap: '20px' }}>
+            <div className="spinner" style={{ width: '50px', height: '50px', border: '4px solid #667eea', borderTop: '4px solid transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+            <p style={{ color: '#b8b8b8' }}>Loading dashboard data...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="dashboard-container">
       <main className="dashboard-main">
         <div className="dashboard-content">
           <div className="content-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <h1>Sistem Takip Paneli</h1>
-              <p>Personel giriş-çıkış ve aktivite takibi</p>
+              <h1>System Tracking Panel</h1>
+              <p>Personnel entry-exit and activity tracking</p>
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button className={selectedView === 'overview' ? 'nav-active' : ''} onClick={() => setSelectedView('overview')}>📊 Genel</button>
-              <button className={selectedView === 'doors' ? 'nav-active' : ''} onClick={() => setSelectedView('doors')}>🚪 Kapılar</button>
-              <button className={selectedView === 'machines' ? 'nav-active' : ''} onClick={() => setSelectedView('machines')}>⚙️ Makineler</button>
-              <button className={selectedView === 'employees' ? 'nav-active' : ''} onClick={() => setSelectedView('employees')}>👥 Çalışanlar</button>
-              <button className={selectedView === 'awards' ? 'nav-active' : ''} onClick={() => setSelectedView('awards')}>🏆 Ödüller</button>
+              <button className={selectedView === 'overview' ? 'nav-active' : ''} onClick={() => setSelectedView('overview')}>📊 Overview</button>
+              <button className={selectedView === 'doors' ? 'nav-active' : ''} onClick={() => setSelectedView('doors')}>🚪 Doors</button>
+              <button className={selectedView === 'machines' ? 'nav-active' : ''} onClick={() => setSelectedView('machines')}>⚙️ Machines</button>
+              <button className={selectedView === 'employees' ? 'nav-active' : ''} onClick={() => setSelectedView('employees')}>👥 Employees</button>
+              <button className={selectedView === 'awards' ? 'nav-active' : ''} onClick={() => setSelectedView('awards')}>🏆 Awards</button>
             </div>
           </div>
 
@@ -238,7 +342,7 @@ function Dashboard() {
                   <p className="stat-title">{stat.title}</p>
                   <h3 className="stat-value">{stat.value}</h3>
                   <span className={`stat-change ${stat.change.startsWith('+') ? 'positive' : 'negative'}`}>
-                    {stat.change} bugün
+                    {stat.change} today
                   </span>
                 </div>
               </div>
@@ -249,12 +353,12 @@ function Dashboard() {
             <>
               {allEvents.length === 0 ? (
                 <div className="chart-card full-width" style={{ textAlign: 'center', padding: '40px' }}>
-                  <h3>📊 Henüz Veri Yok</h3>
+                  <h3>📊 No Data Yet</h3>
                   <p style={{ color: '#b8b8b8', marginTop: '16px' }}>
-                    Sistem kullanılmaya başlandığında burada gerçek zamanlı veriler görünecek.
+                    Real-time data will appear here when the system is in use.
                   </p>
                   <p style={{ color: '#b8b8b8', marginTop: '8px' }}>
-                    Admin panelinden işçi kartları oluşturup, kapı ve makine kayıtları ekleyin.
+                    Create worker cards from the admin panel, add door and machine records.
                   </p>
                 </div>
               ) : (
@@ -262,10 +366,10 @@ function Dashboard() {
               {/* Charts Section */}
               <div className="charts-section">
                 <div className="chart-card">
-                  <h3>Saatlik Kapı Geçiş Analizi</h3>
+                  <h3>Hourly Door Access Analysis</h3>
                   {doorAccessData.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '60px', color: '#b8b8b8' }}>
-                      <p>Henüz kapı geçiş kaydı yok</p>
+                      <p>No door access records yet</p>
                     </div>
                   ) : (
                   <ResponsiveContainer width="100%" height={300}>
@@ -278,31 +382,31 @@ function Dashboard() {
                         labelStyle={{ color: '#fff' }}
                       />
                       <Legend />
-                      <Line type="monotone" dataKey="girisler" stroke="#667eea" strokeWidth={2} name="Giriş" />
-                      <Line type="monotone" dataKey="cikislar" stroke="#764ba2" strokeWidth={2} name="Çıkış" />
+                      <Line type="monotone" dataKey="entries" stroke="#667eea" strokeWidth={2} name="Entry" />
+                      <Line type="monotone" dataKey="exits" stroke="#764ba2" strokeWidth={2} name="Exit" />
                     </LineChart>
                   </ResponsiveContainer>
                   )}
                 </div>
 
                 <div className="chart-card">
-                  <h3>Makine Kullanım Verimliliği</h3>
+                  <h3>Machine Usage Efficiency</h3>
                   {machineUsageData.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '60px', color: '#b8b8b8' }}>
-                      <p>Henüz makine kullanım kaydı yok</p>
+                      <p>No machine usage records yet</p>
                     </div>
                   ) : (
                   <ResponsiveContainer width="100%" height={300}>
                     <BarChart data={machineUsageData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#3a3a3a" />
-                      <XAxis dataKey="makine" stroke="#b8b8b8" />
+                      <XAxis dataKey="machine" stroke="#b8b8b8" />
                       <YAxis stroke="#b8b8b8" />
                       <Tooltip 
                         contentStyle={{ background: '#2a2a2a', border: '1px solid #3a3a3a', borderRadius: '8px' }}
                         labelStyle={{ color: '#fff' }}
                       />
                       <Legend />
-                      <Bar dataKey="verim" fill="#667eea" name="Verimlilik %" />
+                      <Bar dataKey="efficiency" fill="#667eea" name="Efficiency %" />
                     </BarChart>
                   </ResponsiveContainer>
                   )}
@@ -310,10 +414,10 @@ function Dashboard() {
               </div>
 
               <div className="chart-card full-width">
-                <h3>Çalışan Üretim Performansı</h3>
+                <h3>Employee Production Performance</h3>
                 {employeeProductivity.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '60px', color: '#b8b8b8' }}>
-                    <p>Henüz çalışan performans verisi yok</p>
+                    <p>No employee performance data yet</p>
                   </div>
                 ) : (
                 <ResponsiveContainer width="100%" height={300}>
@@ -326,8 +430,8 @@ function Dashboard() {
                       labelStyle={{ color: '#fff' }}
                     />
                     <Legend />
-                    <Bar dataKey="urun" fill="#667eea" name="Üretilen Ürün" />
-                    <Bar dataKey="verim" fill="#764ba2" name="Verimlilik %" />
+                    <Bar dataKey="production" fill="#667eea" name="Produced Items" />
+                    <Bar dataKey="efficiency" fill="#764ba2" name="Efficiency %" />
                   </BarChart>
                 </ResponsiveContainer>
                 )}
@@ -340,12 +444,12 @@ function Dashboard() {
           {selectedView === 'doors' && (
             <div className="doors-section">
               <div className="section-header">
-                <h2>Kapı Geçiş Takibi</h2>
-                <button className="add-btn">+ Yeni Kayıt</button>
+                <h2>Door Access Tracking</h2>
+                <button className="add-btn">+ New Record</button>
               </div>
               
               <div className="chart-card">
-                <h3>Bugünkü Geçiş Hareketleri</h3>
+                <h3>Today's Access Movements</h3>
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={doorAccessData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#3a3a3a" />
@@ -355,55 +459,78 @@ function Dashboard() {
                       contentStyle={{ background: '#2a2a2a', border: '1px solid #3a3a3a', borderRadius: '8px' }}
                     />
                     <Legend />
-                    <Line type="monotone" dataKey="girisler" stroke="#43e97b" strokeWidth={2} name="Giriş" />
-                    <Line type="monotone" dataKey="cikislar" stroke="#ff6b6b" strokeWidth={2} name="Çıkış" />
+                    <Line type="monotone" dataKey="entries" stroke="#43e97b" strokeWidth={2} name="Entry" />
+                    <Line type="monotone" dataKey="exits" stroke="#ff6b6b" strokeWidth={2} name="Exit" />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
 
               <div className="door-table">
-                <h3>Son Kapı Geçişleri</h3>
+                <h3>Recent Door Access</h3>
+                {parsedEvents.doorEvents.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '40px', color: '#b8b8b8' }}>
+                    <p>No door access records yet</p>
+                  </div>
+                ) : (
                 <table>
                   <thead>
                     <tr>
-                      <th>Çalışan</th>
-                      <th>Kapı</th>
-                      <th>Zaman</th>
-                      <th>Tür</th>
-                      <th>Kart No</th>
+                      <th>Employee</th>
+                      <th>Door</th>
+                      <th>Time</th>
+                      <th>Type</th>
+                      <th>Card No</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr>
-                      <td>Ahmet Yılmaz</td>
-                      <td>Ana Giriş</td>
-                      <td>08:15:23</td>
-                      <td><span className="badge giris">Giriş</span></td>
-                      <td>KART-1001</td>
-                    </tr>
-                    <tr>
-                      <td>Ayşe Kaya</td>
-                      <td>Üretim Kapısı</td>
-                      <td>08:22:45</td>
-                      <td><span className="badge giris">Giriş</span></td>
-                      <td>KART-1002</td>
-                    </tr>
-                    <tr>
-                      <td>Mehmet Demir</td>
-                      <td>Depo Kapısı</td>
-                      <td>12:05:12</td>
-                      <td><span className="badge cikis">Çıkış</span></td>
-                      <td>KART-1003</td>
-                    </tr>
-                    <tr>
-                      <td>Zeynep Aydın</td>
-                      <td>Ana Giriş</td>
-                      <td>12:58:34</td>
-                      <td><span className="badge giris">Giriş</span></td>
-                      <td>KART-1004</td>
-                    </tr>
+                    {parsedEvents.doorEvents.slice(0, 10).map((event, index) => {
+                      const worker = workerCards.find(w => w.worker_address === event.worker_address)
+                      
+                      // Decode door name
+                      let doorName = `Door ${event.door_id}`
+                      try {
+                        if (event.door_name) {
+                          if (typeof event.door_name === 'string') {
+                            doorName = event.door_name
+                          } else if (Array.isArray(event.door_name)) {
+                            doorName = new TextDecoder().decode(new Uint8Array(event.door_name))
+                          }
+                        }
+                      } catch (e) {
+                        console.warn('Door name decode error:', e)
+                      }
+
+                      // Decode card number
+                      let cardNumber = 'N/A'
+                      try {
+                        if (event.card_number) {
+                          if (typeof event.card_number === 'string') {
+                            cardNumber = event.card_number
+                          } else if (Array.isArray(event.card_number)) {
+                            cardNumber = new TextDecoder().decode(new Uint8Array(event.card_number))
+                          }
+                        }
+                      } catch (e) {
+                        console.warn('Card number decode error:', e)
+                      }
+
+                      return (
+                        <tr key={index}>
+                          <td>{worker?.name || event.worker_address.slice(0, 8) + '...'}</td>
+                          <td>{doorName}</td>
+                          <td>{event.timestamp.toLocaleTimeString('tr-TR')}</td>
+                          <td>
+                            <span className={`badge ${event.is_entry ? 'giris' : 'cikis'}`}>
+                              {event.is_entry ? 'Entry' : 'Exit'}
+                            </span>
+                          </td>
+                          <td>{cardNumber}</td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
+                )}
               </div>
             </div>
           )}
@@ -411,54 +538,54 @@ function Dashboard() {
           {selectedView === 'machines' && (
             <div className="machines-section">
               <div className="section-header">
-                <h2>Makine/Kaynak Kullanım Takibi</h2>
-                <button className="add-btn">+ Yeni Makine/Kaynak</button>
+                <h2>Machine/Resource Usage Tracking</h2>
+                <button className="add-btn">+ New Machine/Resource</button>
               </div>
 
               <div className="machine-stats-grid">
                 {machineUsageData.map((machine, index) => (
                   <div key={index} className="machine-card">
                     <div className="machine-header">
-                      <h3>{machine.makine}</h3>
-                      <span className={`machine-status ${parseFloat(machine.kullanim) > 7 ? 'active' : 'idle'}`}>
-                        {parseFloat(machine.kullanim) > 7 ? '● Aktif' : '○ Boşta'}
+                      <h3>{machine.machine}</h3>
+                      <span className={`machine-status ${parseFloat(machine.usage) > 7 ? 'active' : 'idle'}`}>
+                        {parseFloat(machine.usage) > 7 ? '● Active' : '○ Idle'}
                       </span>
                     </div>
                     <div className="machine-stats">
                       <div className="stat">
-                        <span className="label">Kullanım Süresi</span>
-                        <span className="value">{machine.kullanim}h</span>
+                        <span className="label">Usage Time</span>
+                        <span className="value">{machine.usage}h</span>
                       </div>
                       <div className="stat">
-                        <span className="label">Üretilen</span>
-                        <span className="value">{machine.urun} adet</span>
+                        <span className="label">Produced</span>
+                        <span className="value">{machine.production} items</span>
                       </div>
                       <div className="stat">
-                        <span className="label">Verimlilik</span>
-                        <span className="value">{machine.verim}%</span>
+                        <span className="label">Efficiency</span>
+                        <span className="value">{machine.efficiency}%</span>
                       </div>
                     </div>
                     <div className="progress-bar">
-                      <div className="progress-fill" style={{ width: `${machine.verim}%` }}></div>
+                      <div className="progress-fill" style={{ width: `${machine.efficiency}%` }}></div>
                     </div>
                   </div>
                 ))}
               </div>
 
               <div className="chart-card full-width">
-                <h3>Makine Bazlı Detaylı Analiz</h3>
+                <h3>Machine-Based Detailed Analysis</h3>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={machineUsageData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#3a3a3a" />
-                    <XAxis dataKey="makine" stroke="#b8b8b8" />
+                    <XAxis dataKey="machine" stroke="#b8b8b8" />
                     <YAxis stroke="#b8b8b8" />
                     <Tooltip 
                       contentStyle={{ background: '#2a2a2a', border: '1px solid #3a3a3a', borderRadius: '8px' }}
                     />
                     <Legend />
-                    <Bar dataKey="kullanim" fill="#667eea" name="Kullanım (saat)" />
-                    <Bar dataKey="urun" fill="#764ba2" name="Üretim (adet)" />
-                    <Bar dataKey="verim" fill="#f093fb" name="Verimlilik %" />
+                    <Bar dataKey="usage" fill="#667eea" name="Usage (hours)" />
+                    <Bar dataKey="production" fill="#764ba2" name="Production (items)" />
+                    <Bar dataKey="efficiency" fill="#f093fb" name="Efficiency %" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -468,86 +595,160 @@ function Dashboard() {
           {selectedView === 'employees' && (
             <div className="employees-section">
               <div className="section-header">
-                <h2>Çalışan Detaylı Takip</h2>
-                <button className="add-btn">+ Yeni Çalışan</button>
+                <h2>Employee Detailed Tracking</h2>
+                <button className="add-btn">+ New Employee</button>
               </div>
               
               <div className="employee-table">
+                {workerCards.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '40px', color: '#b8b8b8' }}>
+                    <p>No worker data yet</p>
+                  </div>
+                ) : (
                 <table>
                   <thead>
                     <tr>
-                      <th>Çalışan</th>
-                      <th>Makine/Kaynak</th>
-                      <th>Giriş</th>
-                      <th>Çıkış</th>
-                      <th>Kullanım Süresi</th>
-                      <th>Üretim</th>
-                      <th>Verimlilik</th>
-                      <th>Durum</th>
+                      <th>Employee</th>
+                      <th>Department</th>
+                      <th>Card No</th>
+                      <th>Work Hours</th>
+                      <th>Production</th>
+                      <th>Efficiency</th>
+                      <th>Events</th>
+                      <th>Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {employeeProductivity.map((emp, index) => (
-                      <tr key={index} onClick={() => setSelectedEmployee(emp.name)} style={{ cursor: 'pointer' }}>
-                        <td><span className="employee-name">👤 {emp.name}</span></td>
-                        <td>{emp.makine}</td>
-                        <td>08:15</td>
-                        <td>16:30</td>
-                        <td>{emp.sure}h</td>
-                        <td>{emp.urun} adet</td>
-                        <td>
-                          <span className={`verimlilik-badge ${emp.verim >= 90 ? 'high' : 'medium'}`}>
-                            {emp.verim}%
-                          </span>
-                        </td>
-                        <td><span className="status active">Aktif</span></td>
-                      </tr>
-                    ))}
-                    <tr>
-                      <td><span className="employee-name">👤 Ali Veli</span></td>
-                      <td>Manuel İş</td>
-                      <td>09:00</td>
-                      <td>17:30</td>
-                      <td>7.2h</td>
-                      <td>-</td>
-                      <td><span className="verimlilik-badge medium">82%</span></td>
-                      <td><span className="status offline">Çıktı</span></td>
-                    </tr>
+                    {workerCards.map((card, index) => {
+                      // Find last clock event for this worker
+                      const lastClock = parsedEvents.clockEvents
+                        .filter(e => e.worker_address === card.worker_address)
+                        .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())[0]
+                      
+                      const isActive = lastClock && lastClock.action_type === 0 // 0 = clock in
+                      
+                      return (
+                        <tr key={index} onClick={() => setSelectedEmployee(card.name)} style={{ cursor: 'pointer' }}>
+                          <td><span className="employee-name">👤 {card.name}</span></td>
+                          <td>{card.department}</td>
+                          <td>{card.card_number}</td>
+                          <td>{(card.total_work_hours / (1000 * 3600)).toFixed(1)}h</td>
+                          <td>{card.total_production} items</td>
+                          <td>
+                            <span className={`verimlilik-badge ${card.efficiency_score >= 80 ? 'high' : card.efficiency_score >= 50 ? 'medium' : 'low'}`}>
+                              {card.efficiency_score}%
+                            </span>
+                          </td>
+                          <td>{card.event_count || 0}</td>
+                          <td>
+                            <span className={`status ${isActive ? 'active' : 'offline'}`}>
+                              {isActive ? 'Active' : 'Offline'}
+                            </span>
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
+                )}
               </div>
 
               {selectedEmployee && (
                 <div className="employee-detail">
-                  <h3>📊 {selectedEmployee} - Detaylı Rapor</h3>
+                  <h3>📊 {selectedEmployee} - Detailed Report</h3>
                   <div className="detail-grid">
                     <div className="detail-card">
-                      <h4>Kapı Geçişleri</h4>
+                      <h4>Door Access</h4>
                       <ul>
-                        <li>Ana Giriş: 08:15:23</li>
-                        <li>Üretim Alanı: 08:22:15</li>
-                        <li>Yemekhane: 12:30:45</li>
-                        <li>Üretim Alanı: 13:15:20</li>
+                        {parsedEvents.doorEvents
+                          .filter(e => {
+                            const worker = workerCards.find(w => w.name === selectedEmployee)
+                            return worker && e.worker_address === worker.worker_address
+                          })
+                          .slice(0, 10)
+                          .map((event, i) => {
+                            let doorName = `Door ${event.door_id}`
+                            try {
+                              if (event.door_name) {
+                                if (typeof event.door_name === 'string') {
+                                  doorName = event.door_name
+                                } else if (Array.isArray(event.door_name)) {
+                                  doorName = new TextDecoder().decode(new Uint8Array(event.door_name))
+                                }
+                              }
+                            } catch (e) {
+                              console.warn('Door name decode error:', e)
+                            }
+                            
+                            return (
+                              <li key={i}>
+                                {doorName}: {event.timestamp.toLocaleTimeString('tr-TR')} - {event.is_entry ? 'Entry' : 'Exit'}
+                              </li>
+                            )
+                          })}
+                        {parsedEvents.doorEvents.filter(e => {
+                          const worker = workerCards.find(w => w.name === selectedEmployee)
+                          return worker && e.worker_address === worker.worker_address
+                        }).length === 0 && <li>No door access records</li>}
                       </ul>
                     </div>
                     <div className="detail-card">
-                      <h4>Kullanılan Kaynaklar</h4>
+                      <h4>Machine Usage</h4>
                       <ul>
-                        <li>CNC Makinesi: 6.5 saat</li>
-                        <li>Ölçüm Aleti: 45 dakika</li>
-                        <li>Paketleme: 1.2 saat</li>
+                        {parsedEvents.machineEvents
+                          .filter(e => {
+                            const worker = workerCards.find(w => w.name === selectedEmployee)
+                            return worker && e.worker_address === worker.worker_address
+                          })
+                          .slice(0, 10)
+                          .map((event, i) => {
+                            let machineName = `Machine ${event.machine_id}`
+                            try {
+                              if (event.machine_name) {
+                                if (typeof event.machine_name === 'string') {
+                                  machineName = event.machine_name
+                                } else if (Array.isArray(event.machine_name)) {
+                                  machineName = new TextDecoder().decode(new Uint8Array(event.machine_name))
+                                }
+                              }
+                            } catch (e) {
+                              console.warn('Machine name decode error:', e)
+                            }
+                            
+                            return (
+                              <li key={i}>
+                                {machineName}: {(event.duration / (1000 * 3600)).toFixed(1)}h - {event.production_count} items ({event.efficiency}%)
+                              </li>
+                            )
+                          })}
+                        {parsedEvents.machineEvents.filter(e => {
+                          const worker = workerCards.find(w => w.name === selectedEmployee)
+                          return worker && e.worker_address === worker.worker_address
+                        }).length === 0 && <li>No machine usage records</li>}
                       </ul>
                     </div>
                     <div className="detail-card">
-                      <h4>Üretim Detayı</h4>
+                      <h4>Clock Events</h4>
                       <ul>
-                        <li>Toplam Üretim: 125 adet</li>
-                        <li>Hatalı: 3 adet (%2.4)</li>
-                        <li>Kalite Skoru: 97.6/100</li>
+                        {parsedEvents.clockEvents
+                          .filter(e => {
+                            const worker = workerCards.find(w => w.name === selectedEmployee)
+                            return worker && e.worker_address === worker.worker_address
+                          })
+                          .slice(0, 10)
+                          .map((event, i) => (
+                            <li key={i}>
+                              {event.action_type === 0 ? '🕐 Clock In' : '🏁 Clock Out'}: {event.timestamp.toLocaleString('tr-TR')}
+                            </li>
+                          ))}
+                        {parsedEvents.clockEvents.filter(e => {
+                          const worker = workerCards.find(w => w.name === selectedEmployee)
+                          return worker && e.worker_address === worker.worker_address
+                        }).length === 0 && <li>No clock events</li>}
                       </ul>
                     </div>
                   </div>
-                  <button className="close-detail" onClick={() => setSelectedEmployee(null)}>Kapat</button>
+                  <button className="close-detail" onClick={() => setSelectedEmployee(null)}>Close</button>
                 </div>
               )}
             </div>
@@ -556,55 +757,71 @@ function Dashboard() {
           {selectedView === 'awards' && (
             <div className="awards-section">
               <div className="section-header">
-                <h2>Ödüller ve Başarılar</h2>
-                <button className="add-btn">+ Yeni Ödül Ver</button>
+                <h2>Awards and Achievements</h2>
               </div>
 
-              <div className="awards-grid">
-                {employeeAwards.map((award) => (
-                  <div key={award.id} className="award-card">
-                    <div className="award-badge">
-                      <span className="award-icon">{award.odul.split(' ')[0]}</span>
-                      <span className="award-points">+{award.puan} puan</span>
-                    </div>
-                    <h3>{award.odul.split(' ').slice(1).join(' ')}</h3>
-                    <p className="award-employee">🎖️ {award.calisan}</p>
-                    <p className="award-description">{award.aciklama}</p>
-                    <p className="award-date">📅 {award.tarih}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="leaderboard">
-                <h3>🏆 Puan Sıralaması</h3>
-                <div className="leaderboard-list">
-                  <div className="leaderboard-item gold">
-                    <span className="rank">1</span>
-                    <span className="name">Ayşe Kaya</span>
-                    <span className="score">275 puan</span>
-                  </div>
-                  <div className="leaderboard-item silver">
-                    <span className="rank">2</span>
-                    <span className="name">Ahmet Yılmaz</span>
-                    <span className="score">240 puan</span>
-                  </div>
-                  <div className="leaderboard-item bronze">
-                    <span className="rank">3</span>
-                    <span className="name">Zeynep Aydın</span>
-                    <span className="score">210 puan</span>
-                  </div>
-                  <div className="leaderboard-item">
-                    <span className="rank">4</span>
-                    <span className="name">Mehmet Demir</span>
-                    <span className="score">185 puan</span>
-                  </div>
-                  <div className="leaderboard-item">
-                    <span className="rank">5</span>
-                    <span className="name">Can Söz</span>
-                    <span className="score">150 puan</span>
-                  </div>
+              {employeeAwards.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: '#b8b8b8' }}>
+                  <p>No awards given yet</p>
                 </div>
-              </div>
+              ) : (
+                <>
+                  <div className="awards-grid">
+                    {employeeAwards.map((award) => (
+                      <div key={award.id} className="award-card">
+                        <div className="award-badge">
+                          <span className="award-icon">{award.award.split(' ')[0]}</span>
+                          <span className="award-points">+{award.points} points</span>
+                        </div>
+                        <h3>{award.award.split(' ').slice(1).join(' ')}</h3>
+                        <p className="award-employee">🎖️ {award.employee}</p>
+                        <p className="award-description">{award.description}</p>
+                        <p className="award-date">📅 {award.date}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="leaderboard">
+                    <h3>🏆 Points Leaderboard</h3>
+                    <div className="leaderboard-list">
+                      {(() => {
+                        // Calculate total points per worker
+                        const workerPoints = new Map<string, { name: string; points: number }>()
+                        
+                        parsedEvents.awardEvents.forEach(award => {
+                          const worker = workerCards.find(w => w.worker_address === award.worker_address)
+                          const name = worker?.name || award.worker_address.slice(0, 8) + '...'
+                          
+                          if (!workerPoints.has(award.worker_address)) {
+                            workerPoints.set(award.worker_address, { name, points: 0 })
+                          }
+                          workerPoints.get(award.worker_address)!.points += award.points
+                        })
+                        
+                        // Sort by points descending
+                        const sorted = Array.from(workerPoints.values())
+                          .sort((a, b) => b.points - a.points)
+                          .slice(0, 5)
+                        
+                        if (sorted.length === 0) {
+                          return <p style={{ textAlign: 'center', color: '#b8b8b8', padding: '20px' }}>No leaderboard data yet</p>
+                        }
+                        
+                        return sorted.map((worker, index) => (
+                          <div 
+                            key={index} 
+                            className={`leaderboard-item ${index === 0 ? 'gold' : index === 1 ? 'silver' : index === 2 ? 'bronze' : ''}`}
+                          >
+                            <span className="rank">{index + 1}</span>
+                            <span className="name">{worker.name}</span>
+                            <span className="score">{worker.points} points</span>
+                          </div>
+                        ))
+                      })()}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           )}
 

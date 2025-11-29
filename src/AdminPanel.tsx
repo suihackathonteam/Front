@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useCurrentAccount } from '@mysten/dapp-kit'
-import { useAdminCap, useIdentityTransaction, useWorkerCard } from './hooks/useIdentity'
+import { useAdminCap, useIdentityTransaction } from './hooks/useIdentity'
 import { 
   buildIssueWorkerCardTx, 
   buildRegisterDoorTx, 
@@ -9,8 +9,7 @@ import {
   buildUpdateWorkerCardTx,
   buildDeactivateWorkerCardTx,
   buildActivateWorkerCardTx,
-  buildBatchIssueWorkerCardsTx,
-  buildTransferAdminCapTx,
+  buildAddNewAdminTx,
 } from './utils/transactions'
 import { isContractConfigured } from './config/contracts'
 import SuiConnectButton from './SuiConnectButton'
@@ -24,7 +23,6 @@ function AdminPanel() {
   const [activeTab, setActiveTab] = useState<'workers' | 'doors' | 'machines' | 'awards' | 'manage'>('workers')
   const [showSuccess, setShowSuccess] = useState(false)
 
-  // Worker Card Form
   const [workerForm, setWorkerForm] = useState({
     worker_address: '',
     card_number: '',
@@ -32,36 +30,30 @@ function AdminPanel() {
     department: '',
   })
 
-  // Update Worker Card Form
   const [updateWorkerForm, setUpdateWorkerForm] = useState({
     worker_card_id: '',
     name: '',
     department: '',
   })
 
-  // Card Management Form
   const [cardManagementForm, setCardManagementForm] = useState({
     worker_card_id: '',
   })
 
-  // Transfer Admin Form
   const [transferAdminForm, setTransferAdminForm] = useState({
     new_admin_address: '',
   })
 
-  // Door Form
   const [doorForm, setDoorForm] = useState({
     name: '',
     location: '',
   })
 
-  // Machine Form
   const [machineForm, setMachineForm] = useState({
     name: '',
     machine_type: '',
   })
 
-  // Award Form
   const [awardForm, setAwardForm] = useState({
     worker_card_id: '',
     award_type: '',
@@ -69,32 +61,30 @@ function AdminPanel() {
     description: '',
   })
 
-  // Wallet bağlı değil
   if (!account) {
     return (
       <div className="admin-container">
         <div className="admin-connect">
-          <h2>🔐 Admin Paneli</h2>
-          <p>Admin paneline erişmek için lütfen cüzdanınızı bağlayın</p>
+          <h2>🔐 Admin Panel</h2>
+          <p>Please connect your wallet to access the admin panel</p>
           <SuiConnectButton />
         </div>
       </div>
     )
   }
 
-  // Contract yapılandırılmamış
   if (!isContractConfigured()) {
     return (
       <div className="admin-container">
         <div className="admin-warning">
-          <h2>⚠️ Contract Yapılandırma Gerekli</h2>
-          <p>Smart contract henüz deploy edilmemiş veya yapılandırılmamış.</p>
+          <h2>⚠️ Contract Configuration Required</h2>
+          <p>Smart contract has not been deployed or configured yet.</p>
           <div className="config-steps">
-            <h3>Yapılması Gerekenler:</h3>
+            <h3>Steps Required:</h3>
             <ol>
-              <li>Smart contract'ı Sui network'e deploy edin</li>
-              <li><code>src/config/contracts.ts</code> dosyasını açın</li>
-              <li>PACKAGE_ID ve SYSTEM_REGISTRY_ID değerlerini güncelleyin</li>
+              <li>Deploy the smart contract to Sui network</li>
+              <li>Open <code>src/config/contracts.ts</code> file</li>
+              <li>Update PACKAGE_ID and SYSTEM_REGISTRY_ID values</li>
             </ol>
           </div>
         </div>
@@ -102,13 +92,12 @@ function AdminPanel() {
     )
   }
 
-  // Admin yetkisi yok
   if (adminLoading) {
     return (
       <div className="admin-container">
         <div className="admin-loading">
           <div className="spinner"></div>
-          <p>Yetki kontrol ediliyor...</p>
+          <p>Checking permissions...</p>
         </div>
       </div>
     )
@@ -118,15 +107,14 @@ function AdminPanel() {
     return (
       <div className="admin-container">
         <div className="admin-unauthorized">
-          <h2>🚫 Yetkisiz Erişim</h2>
-          <p>Bu sayfaya erişmek için AdminCap yetkisine sahip olmalısınız.</p>
-          <p className="address-info">Bağlı adres: <code>{account.address}</code></p>
+          <h2>🚫 Unauthorized Access</h2>
+          <p>You must have AdminCap permission to access this page.</p>
+          <p className="address-info">Connected address: <code>{account.address}</code></p>
         </div>
       </div>
     )
   }
 
-  // Worker Card kaydet
   const handleIssueWorkerCard = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!adminCapId) return
@@ -142,11 +130,11 @@ function AdminPanel() {
     })
   }
 
-  // Kapı kaydet
   const handleRegisterDoor = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    const tx = buildRegisterDoorTx(doorForm)
+    if (!adminCapId) return
+
+    const tx = buildRegisterDoorTx(adminCapId, doorForm)
     
     executeTransaction(tx, {
       onSuccess: () => {
@@ -157,11 +145,11 @@ function AdminPanel() {
     })
   }
 
-  // Makine kaydet
   const handleRegisterMachine = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    const tx = buildRegisterMachineTx(machineForm)
+    if (!adminCapId) return
+
+    const tx = buildRegisterMachineTx(adminCapId, machineForm)
     
     executeTransaction(tx, {
       onSuccess: () => {
@@ -172,7 +160,6 @@ function AdminPanel() {
     })
   }
 
-  // Ödül ver
   const handleIssueAward = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!adminCapId) return
@@ -192,7 +179,6 @@ function AdminPanel() {
     })
   }
 
-  // Worker Card güncelle
   const handleUpdateWorkerCard = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!adminCapId) return
@@ -211,12 +197,10 @@ function AdminPanel() {
     })
   }
 
-  // Card status değiştirme (dummy handler)
   const handleCardStatusChange = (e: React.FormEvent) => {
     e.preventDefault()
   }
 
-  // Worker Card devre dışı bırak
   const handleDeactivateCard = async () => {
     if (!adminCapId || !cardManagementForm.worker_card_id) return
 
@@ -230,7 +214,6 @@ function AdminPanel() {
     })
   }
 
-  // Worker Card aktif et
   const handleActivateCard = async () => {
     if (!adminCapId || !cardManagementForm.worker_card_id) return
 
@@ -244,25 +227,22 @@ function AdminPanel() {
     })
   }
 
-  // Admin yetkisi transfer et
   const handleTransferAdmin = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!adminCapId) return
 
     const confirmation = window.confirm(
-      '⚠️ DİKKAT: AdminCap transfer edilecek! Bu işlem geri alınamaz. Devam etmek istiyor musunuz?'
+      '⚠️ DİKKAT: Bu adres için yeni bir AdminCap oluşturulacak. Devam etmek istiyor musunuz?'
     )
     
     if (!confirmation) return
 
-    const tx = buildTransferAdminCapTx(adminCapId, transferAdminForm.new_admin_address)
+    const tx = buildAddNewAdminTx(adminCapId, transferAdminForm.new_admin_address)
     
     executeTransaction(tx, {
       onSuccess: () => {
-        alert('✓ Admin yetkisi başarıyla transfer edildi!')
+        alert('✓ Yeni admin yetkisi başarıyla oluşturuldu!')
         setTransferAdminForm({ new_admin_address: '' })
-        // Sayfayı yenile çünkü artık admin değiliz
-        setTimeout(() => window.location.reload(), 2000)
       },
     })
   }
@@ -270,7 +250,7 @@ function AdminPanel() {
   return (
     <div className="admin-container">
       <div className="admin-header">
-        <h1>🔐 Admin Paneli</h1>
+        <h1>🔐 Admin Panel</h1>
         <div className="admin-info">
           <span className="admin-badge">✓ Admin</span>
           <span className="admin-address">{account.address.slice(0, 6)}...{account.address.slice(-4)}</span>
@@ -279,13 +259,13 @@ function AdminPanel() {
 
       {showSuccess && (
         <div className="success-banner">
-          ✓ İşlem başarıyla tamamlandı!
+          ✓ Transaction completed successfully!
         </div>
       )}
 
       {txError && (
         <div className="error-banner">
-          ✗ Hata: {txError}
+          ✗ Error: {txError}
         </div>
       )}
 
@@ -294,41 +274,41 @@ function AdminPanel() {
           className={activeTab === 'workers' ? 'tab-active' : ''}
           onClick={() => setActiveTab('workers')}
         >
-          👥 Çalışan Kartları
+          👥 Worker Cards
         </button>
         <button 
           className={activeTab === 'doors' ? 'tab-active' : ''}
           onClick={() => setActiveTab('doors')}
         >
-          🚪 Kapılar
+          🚪 Doors
         </button>
         <button 
           className={activeTab === 'machines' ? 'tab-active' : ''}
           onClick={() => setActiveTab('machines')}
         >
-          ⚙️ Makineler
+          ⚙️ Machines
         </button>
         <button 
           className={activeTab === 'awards' ? 'tab-active' : ''}
           onClick={() => setActiveTab('awards')}
         >
-          🏆 Ödül Ver
+          🏆 Give Award
         </button>
         <button 
           className={activeTab === 'manage' ? 'tab-active' : ''}
           onClick={() => setActiveTab('manage')}
         >
-          🔧 Yönetim
+          🔧 Management
         </button>
       </div>
 
       <div className="admin-content">
         {activeTab === 'workers' && (
           <div className="admin-form-card">
-            <h2>Yeni Çalışan Kartı Oluştur</h2>
+            <h2>Create New Worker Card</h2>
             <form onSubmit={handleIssueWorkerCard}>
               <div className="form-group">
-                <label>Çalışan Adresi (Sui Address)</label>
+                <label>Worker Address (Sui Address)</label>
                 <input
                   type="text"
                   placeholder="0x..."
@@ -338,37 +318,37 @@ function AdminPanel() {
                 />
               </div>
               <div className="form-group">
-                <label>Kart Numarası</label>
+                <label>Card Number</label>
                 <input
                   type="text"
-                  placeholder="KART-1001"
+                  placeholder="CARD-1001"
                   value={workerForm.card_number}
                   onChange={(e) => setWorkerForm({ ...workerForm, card_number: e.target.value })}
                   required
                 />
               </div>
               <div className="form-group">
-                <label>Ad Soyad</label>
+                <label>Full Name</label>
                 <input
                   type="text"
-                  placeholder="Ahmet Yılmaz"
+                  placeholder="John Doe"
                   value={workerForm.name}
                   onChange={(e) => setWorkerForm({ ...workerForm, name: e.target.value })}
                   required
                 />
               </div>
               <div className="form-group">
-                <label>Departman</label>
+                <label>Department</label>
                 <input
                   type="text"
-                  placeholder="Üretim"
+                  placeholder="Production"
                   value={workerForm.department}
                   onChange={(e) => setWorkerForm({ ...workerForm, department: e.target.value })}
                   required
                 />
               </div>
               <button type="submit" className="submit-btn" disabled={txLoading}>
-                {txLoading ? 'İşleniyor...' : 'Kart Oluştur'}
+                {txLoading ? 'Processing...' : 'Create Card'}
               </button>
             </form>
           </div>
@@ -376,30 +356,30 @@ function AdminPanel() {
 
         {activeTab === 'doors' && (
           <div className="admin-form-card">
-            <h2>Yeni Kapı Ekle</h2>
+            <h2>Add New Door</h2>
             <form onSubmit={handleRegisterDoor}>
               <div className="form-group">
-                <label>Kapı Adı</label>
+                <label>Door Name</label>
                 <input
                   type="text"
-                  placeholder="Ana Giriş Kapısı"
+                  placeholder="Main Entrance Door"
                   value={doorForm.name}
                   onChange={(e) => setDoorForm({ ...doorForm, name: e.target.value })}
                   required
                 />
               </div>
               <div className="form-group">
-                <label>Konum</label>
+                <label>Location</label>
                 <input
                   type="text"
-                  placeholder="Zemin Kat - Giriş"
+                  placeholder="Ground Floor - Entrance"
                   value={doorForm.location}
                   onChange={(e) => setDoorForm({ ...doorForm, location: e.target.value })}
                   required
                 />
               </div>
               <button type="submit" className="submit-btn" disabled={txLoading}>
-                {txLoading ? 'İşleniyor...' : 'Kapı Ekle'}
+                {txLoading ? 'Processing...' : 'Add Door'}
               </button>
             </form>
           </div>
@@ -407,10 +387,10 @@ function AdminPanel() {
 
         {activeTab === 'machines' && (
           <div className="admin-form-card">
-            <h2>Yeni Makine/Kaynak Ekle</h2>
+            <h2>Add New Machine/Resource</h2>
             <form onSubmit={handleRegisterMachine}>
               <div className="form-group">
-                <label>Makine Adı</label>
+                <label>Machine Name</label>
                 <input
                   type="text"
                   placeholder="CNC-001"
@@ -420,17 +400,17 @@ function AdminPanel() {
                 />
               </div>
               <div className="form-group">
-                <label>Makine Tipi</label>
+                <label>Machine Type</label>
                 <input
                   type="text"
-                  placeholder="CNC Torna"
+                  placeholder="CNC Lathe"
                   value={machineForm.machine_type}
                   onChange={(e) => setMachineForm({ ...machineForm, machine_type: e.target.value })}
                   required
                 />
               </div>
               <button type="submit" className="submit-btn" disabled={txLoading}>
-                {txLoading ? 'İşleniyor...' : 'Makine Ekle'}
+                {txLoading ? 'Processing...' : 'Add Machine'}
               </button>
             </form>
           </div>
@@ -438,7 +418,7 @@ function AdminPanel() {
 
         {activeTab === 'awards' && (
           <div className="admin-form-card">
-            <h2>Çalışana Ödül Ver</h2>
+            <h2>Give Award to Employee</h2>
             <form onSubmit={handleIssueAward}>
               <div className="form-group">
                 <label>Worker Card ID</label>
@@ -449,20 +429,20 @@ function AdminPanel() {
                   onChange={(e) => setAwardForm({ ...awardForm, worker_card_id: e.target.value })}
                   required
                 />
-                <small>Çalışanın WorkerCard object ID'si</small>
+                <small>Employee's WorkerCard object ID</small>
               </div>
               <div className="form-group">
-                <label>Ödül Tipi</label>
+                <label>Award Type</label>
                 <input
                   type="text"
-                  placeholder="Ayın Çalışanı"
+                  placeholder="Employee of the Month"
                   value={awardForm.award_type}
                   onChange={(e) => setAwardForm({ ...awardForm, award_type: e.target.value })}
                   required
                 />
               </div>
               <div className="form-group">
-                <label>Puan</label>
+                <label>Points</label>
                 <input
                   type="number"
                   placeholder="100"
@@ -472,9 +452,9 @@ function AdminPanel() {
                 />
               </div>
               <div className="form-group">
-                <label>Açıklama</label>
+                <label>Description</label>
                 <textarea
-                  placeholder="En yüksek verimlilik performansı"
+                  placeholder="Highest productivity performance"
                   value={awardForm.description}
                   onChange={(e) => setAwardForm({ ...awardForm, description: e.target.value })}
                   required
@@ -482,7 +462,7 @@ function AdminPanel() {
                 />
               </div>
               <button type="submit" className="submit-btn" disabled={txLoading}>
-                {txLoading ? 'İşleniyor...' : 'Ödül Ver'}
+                {txLoading ? 'Processing...' : 'Give Award'}
               </button>
             </form>
           </div>
@@ -491,7 +471,7 @@ function AdminPanel() {
         {activeTab === 'manage' && (
           <div className="manage-section">
             <div className="admin-form-card">
-              <h2>Worker Card Güncelle</h2>
+              <h2>Update Worker Card</h2>
               <form onSubmit={handleUpdateWorkerCard}>
                 <div className="form-group">
                   <label>Worker Card ID</label>
@@ -504,33 +484,33 @@ function AdminPanel() {
                   />
                 </div>
                 <div className="form-group">
-                  <label>Yeni Ad Soyad</label>
+                  <label>New Full Name</label>
                   <input
                     type="text"
-                    placeholder="Ahmet Yılmaz"
+                    placeholder="John Doe"
                     value={updateWorkerForm.name}
                     onChange={(e) => setUpdateWorkerForm({ ...updateWorkerForm, name: e.target.value })}
                     required
                   />
                 </div>
                 <div className="form-group">
-                  <label>Yeni Departman</label>
+                  <label>New Department</label>
                   <input
                     type="text"
-                    placeholder="Üretim"
+                    placeholder="Production"
                     value={updateWorkerForm.department}
                     onChange={(e) => setUpdateWorkerForm({ ...updateWorkerForm, department: e.target.value })}
                     required
                   />
                 </div>
                 <button type="submit" className="submit-btn" disabled={txLoading}>
-                  {txLoading ? 'İşleniyor...' : 'Güncelle'}
+                  {txLoading ? 'Processing...' : 'Update'}
                 </button>
               </form>
             </div>
 
             <div className="admin-form-card">
-              <h2>Worker Card Durumu</h2>
+              <h2>Worker Card Status</h2>
               <form onSubmit={handleCardStatusChange}>
                 <div className="form-group">
                   <label>Worker Card ID</label>
@@ -549,7 +529,7 @@ function AdminPanel() {
                     onClick={() => handleDeactivateCard()}
                     disabled={txLoading}
                   >
-                    🚫 Devre Dışı Bırak
+                    🚫 Deactivate
                   </button>
                   <button 
                     type="button" 
@@ -557,17 +537,17 @@ function AdminPanel() {
                     onClick={() => handleActivateCard()}
                     disabled={txLoading}
                   >
-                    ✅ Aktif Et
+                    ✅ Activate
                   </button>
                 </div>
               </form>
             </div>
 
             <div className="admin-form-card">
-              <h2>Yeni Admin Oluştur</h2>
+              <h2>Create New Admin</h2>
               <form onSubmit={handleTransferAdmin}>
                 <div className="form-group">
-                  <label>Yeni Admin Adresi</label>
+                  <label>New Admin Address</label>
                   <input
                     type="text"
                     placeholder="0x..."
@@ -575,10 +555,10 @@ function AdminPanel() {
                     onChange={(e) => setTransferAdminForm({ ...transferAdminForm, new_admin_address: e.target.value })}
                     required
                   />
-                  <small>⚠️ Dikkat: AdminCap transfer edilecek, yeni bir admin oluşturulacak</small>
+                  <small>✓ A new AdminCap will be created for this address. Your admin permissions will remain intact.</small>
                 </div>
                 <button type="submit" className="submit-btn" disabled={txLoading}>
-                  {txLoading ? 'İşleniyor...' : 'Admin Yetkisi Ver'}
+                  {txLoading ? 'Processing...' : 'Create New Admin'}
                 </button>
               </form>
             </div>

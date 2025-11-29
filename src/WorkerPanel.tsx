@@ -1,12 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useCurrentAccount } from '@mysten/dapp-kit'
 import { useWorkerCard, useIdentityTransaction, useIdentityEvents } from './hooks/useIdentity'
-import { 
-  buildRecordDoorAccessTx, 
-  buildRecordMachineUsageTx, 
-  buildClockInOutTx 
-} from './utils/transactions'
-import { ACTION_TYPES } from './config/contracts'
+import { buildClockInOutTx } from './utils/transactions'
+import { ACTION_TYPES, CONTRACT_CONFIG } from './config/contracts'
 import SuiConnectButton from './SuiConnectButton'
 import './WorkerPanel.css'
 
@@ -18,29 +14,79 @@ function WorkerPanel() {
   const { events: machineEvents } = useIdentityEvents('MachineUsageEvent')
   const { events: clockEvents } = useIdentityEvents('ClockEvent')
   
+  // Get door entries from localStorage
+  const [localDoorEntries, setLocalDoorEntries] = useState<any[]>([])
+  
+  useEffect(() => {
+    const loadDoorEntries = () => {
+      const entries = JSON.parse(localStorage.getItem('doorEntries') || '[]')
+      setLocalDoorEntries(entries)
+    }
+    
+    loadDoorEntries()
+    // Refresh every second to show updates
+    const interval = setInterval(loadDoorEntries, 1000)
+    return () => clearInterval(interval)
+  }, [])
+  
+  // Combine blockchain events and local entries
+  const allDoorEvents = [...doorEvents, ...localDoorEntries]
+  
   const [showSuccess, setShowSuccess] = useState(false)
-  const [activeTab, setActiveTab] = useState<'info' | 'activity' | 'actions'>('info')
-
-  // Door access form
-  const [doorForm, setDoorForm] = useState({
-    door_id: '',
-    access_type: '2', // 2 = entry
+  const [activeTab, setActiveTab] = useState<'info' | 'activity'>('info')
+  const [shiftActive, setShiftActive] = useState(() => {
+    const saved = localStorage.getItem('shiftActive')
+    return saved === 'true'
   })
-
-  // Machine usage form
-  const [machineForm, setMachineForm] = useState({
-    machine_id: '',
-    usage_duration_hours: '',
-    production_count: '',
-    efficiency_percentage: '',
+  const [localProductionCount, setLocalProductionCount] = useState(() => {
+    const saved = localStorage.getItem('localProductionCount')
+    return saved ? parseInt(saved, 10) : 0
   })
+  const [shiftStartTime, setShiftStartTime] = useState<number | null>(() => {
+    const saved = localStorage.getItem('shiftStartTime')
+    return saved ? parseInt(saved, 10) : null
+  })
+  const [currentWorkTime, setCurrentWorkTime] = useState(0)
+
+  // Live work time counter
+  useEffect(() => {
+    let interval: number | null = null
+    
+    if (shiftActive && shiftStartTime) {
+      interval = window.setInterval(() => {
+        const elapsed = Date.now() - shiftStartTime
+        setCurrentWorkTime(elapsed)
+      }, 1000) // Update every second
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval)
+    }
+  }, [shiftActive, shiftStartTime])
+
+  // Persist shift state to localStorage
+  useEffect(() => {
+    localStorage.setItem('shiftActive', String(shiftActive))
+  }, [shiftActive])
+
+  useEffect(() => {
+    if (shiftStartTime !== null) {
+      localStorage.setItem('shiftStartTime', String(shiftStartTime))
+    } else {
+      localStorage.removeItem('shiftStartTime')
+    }
+  }, [shiftStartTime])
+
+  useEffect(() => {
+    localStorage.setItem('localProductionCount', String(localProductionCount))
+  }, [localProductionCount])
 
   if (!account) {
     return (
       <div className="worker-container">
         <div className="worker-connect">
-          <h2>👤 Çalışan Paneli</h2>
-          <p>Panele erişmek için lütfen cüzdanınızı bağlayın</p>
+          <h2>👤 Worker Panel</h2>
+          <p>Please connect your wallet to access the panel</p>
           <SuiConnectButton />
         </div>
       </div>
@@ -52,7 +98,7 @@ function WorkerPanel() {
       <div className="worker-container">
         <div className="worker-loading">
           <div className="spinner"></div>
-          <p>Worker Card kontrol ediliyor...</p>
+          <p>Checking Worker Card...</p>
         </div>
       </div>
     )
@@ -62,121 +108,160 @@ function WorkerPanel() {
     return (
       <div className="worker-container">
         <div className="worker-no-card">
-          <h2>⚠️ Worker Card Bulunamadı</h2>
-          <p>Bu adres için henüz bir Worker Card oluşturulmamış.</p>
-          <p className="address-info">Bağlı adres: <code>{account.address}</code></p>
-          <p>Lütfen sistem yöneticisinden bir Worker Card talep edin.</p>
+          <h2>⚠️ Worker Card Not Found</h2>
+          <p>No Worker Card has been created for this address yet.</p>
+          <p className="address-info">Connected address: <code>{account.address}</code></p>
+          <p>Please request a Worker Card from the system administrator.</p>
         </div>
       </div>
     )
   }
 
-  // Card inactive ise uyarı göster
   if (!workerCard.is_active) {
     return (
       <div className="worker-container">
         <div className="worker-no-card">
-          <h2>🚫 Worker Card Devre Dışı</h2>
-          <p>Kartınız sistem yöneticisi tarafından devre dışı bırakılmış.</p>
-          <p className="address-info">Bağlı adres: <code>{account.address}</code></p>
-          <p>Daha fazla bilgi için sistem yöneticisi ile iletişime geçin.</p>
+          <h2>🚫 Worker Card Disabled</h2>
+          <p>Your card has been disabled by the system administrator.</p>
+          <p className="address-info">Connected address: <code>{account.address}</code></p>
+          <p>Please contact the system administrator for more information.</p>
         </div>
       </div>
     )
   }
 
-  // Clock In
   const handleClockIn = async () => {
-    const tx = buildClockInOutTx(workerCard.id, ACTION_TYPES.CLOCK_IN)
+    // Prevent starting a new shift if one is already active
+    if (shiftActive) {
+      alert('⚠️ Zaten aktif bir vardiya var! Önce vardiyayı bitirmelisiniz.')
+      return
+    }
+    
+    const tx = buildClockInOutTx(workerCard.id, CONTRACT_CONFIG.SYSTEM_REGISTRY_ID, ACTION_TYPES.CLOCK_IN)
     executeTransaction(tx, {
       onSuccess: () => {
         setShowSuccess(true)
+        // enable local production counting when clock-in succeeds
+        const startTime = Date.now()
+        setShiftActive(true)
+        setLocalProductionCount(0)
+        setShiftStartTime(startTime)
+        setCurrentWorkTime(0)
         setTimeout(() => setShowSuccess(false), 3000)
       },
     })
   }
 
-  // Clock Out
   const handleClockOut = async () => {
-    const tx = buildClockInOutTx(workerCard.id, ACTION_TYPES.CLOCK_OUT)
-    executeTransaction(tx, {
-      onSuccess: () => {
-        setShowSuccess(true)
-        setTimeout(() => setShowSuccess(false), 3000)
-      },
-    })
-  }
-
-  // Door Access
-  const handleDoorAccess = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const tx = buildRecordDoorAccessTx(
-      workerCard.id,
-      Number(doorForm.door_id),
-      Number(doorForm.access_type)
-    )
-    executeTransaction(tx, {
-      onSuccess: () => {
-        setShowSuccess(true)
-        setDoorForm({ door_id: '', access_type: '2' })
-        setTimeout(() => setShowSuccess(false), 3000)
-      },
-    })
-  }
-
-  // Machine Usage
-  const handleMachineUsage = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const durationMs = Number(machineForm.usage_duration_hours) * 60 * 60 * 1000
+    if (!shiftActive) {
+      alert('⚠️ Aktif bir vardiya yok!')
+      return
+    }
     
-    const tx = buildRecordMachineUsageTx(workerCard.id, {
-      machine_id: Number(machineForm.machine_id),
-      usage_duration_ms: durationMs,
-      production_count: Number(machineForm.production_count),
-      efficiency_percentage: Number(machineForm.efficiency_percentage),
-    })
-    
+    const tx = buildClockInOutTx(workerCard.id, CONTRACT_CONFIG.SYSTEM_REGISTRY_ID, ACTION_TYPES.CLOCK_OUT)
     executeTransaction(tx, {
       onSuccess: () => {
         setShowSuccess(true)
-        setMachineForm({
-          machine_id: '',
-          usage_duration_hours: '',
-          production_count: '',
-          efficiency_percentage: '',
-        })
+        // disable local production counting on clock-out
+        setShiftActive(false)
+        setShiftStartTime(null)
+        setCurrentWorkTime(0)
+        localStorage.removeItem('shiftActive')
+        localStorage.removeItem('shiftStartTime')
+        localStorage.removeItem('localProductionCount')
         setTimeout(() => setShowSuccess(false), 3000)
       },
     })
   }
 
-  // Format work hours
+  const handleIncreaseProduction = () => {
+    if (!shiftActive) return
+    setLocalProductionCount((c) => c + 1)
+  }
+
+  const handleDoorEntry = async () => {
+    // Save to localStorage instead of blockchain
+    const entry = {
+      worker_address: account.address,
+      door_id: 0,
+      door_name: 'Main Entrance',
+      timestamp: Date.now(),
+      is_entry: true,
+    }
+    
+    const existingEntries = JSON.parse(localStorage.getItem('doorEntries') || '[]')
+    existingEntries.unshift(entry)
+    localStorage.setItem('doorEntries', JSON.stringify(existingEntries.slice(0, 50)))
+    
+    setShowSuccess(true)
+    setTimeout(() => setShowSuccess(false), 3000)
+  }
+
+  const handleDoorExit = async () => {
+    // Save to localStorage instead of blockchain
+    const exit = {
+      worker_address: account.address,
+      door_id: 0,
+      door_name: 'Main Entrance',
+      timestamp: Date.now(),
+      is_entry: false,
+    }
+    
+    const existingEntries = JSON.parse(localStorage.getItem('doorEntries') || '[]')
+    existingEntries.unshift(exit)
+    localStorage.setItem('doorEntries', JSON.stringify(existingEntries.slice(0, 50)))
+    
+    setShowSuccess(true)
+    setTimeout(() => setShowSuccess(false), 3000)
+  }
+
   const formatWorkHours = (ms: number) => {
-    const hours = Math.floor(ms / (1000 * 60 * 60))
-    const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60))
-    return `${hours}s ${minutes}d`
+    const totalSeconds = Math.floor(ms / 1000)
+    const hours = Math.floor(totalSeconds / 3600)
+    const minutes = Math.floor((totalSeconds % 3600) / 60)
+    const seconds = totalSeconds % 60
+    return `${hours}s ${minutes}d ${seconds}sn`
   }
 
   return (
     <div className="worker-container">
       <div className="worker-header">
         <div className="worker-title">
-          <h1>👤 Çalışan Paneli</h1>
+          <h1>👤 Worker Panel</h1>
           <p>{workerCard.name} - {workerCard.department}</p>
         </div>
         <div className="quick-actions">
-          <button className="clock-btn clock-in" onClick={handleClockIn} disabled={txLoading}>
-            🕐 Mesai Başlat
+          <button 
+            className="clock-btn clock-in" 
+            onClick={handleClockIn} 
+            disabled={txLoading || shiftActive}
+            title={shiftActive ? 'Zaten aktif bir vardiya var' : 'Vardiya başlat'}
+          >
+            🕐 Start Shift
           </button>
-          <button className="clock-btn clock-out" onClick={handleClockOut} disabled={txLoading}>
-            🕐 Mesai Bitir
+          <button 
+            className="clock-btn clock-out" 
+            onClick={handleClockOut} 
+            disabled={txLoading || !shiftActive}
+            title={!shiftActive ? 'Aktif vardiya yok' : 'Vardiyayı bitir'}
+          >
+            🕐 End Shift
+          </button>
+          <button className="prod-btn" onClick={handleIncreaseProduction} disabled={!shiftActive || txLoading}>
+            ➕ Ürün Ekle
+          </button>
+          <button className="door-btn door-entry" onClick={handleDoorEntry}>
+            🚪 Giriş
+          </button>
+          <button className="door-btn door-exit" onClick={handleDoorExit}>
+            🚪 Çıkış
           </button>
         </div>
       </div>
 
       {showSuccess && (
         <div className="success-banner">
-          ✓ İşlem başarıyla kaydedildi!
+          ✓ Transaction successfully recorded!
         </div>
       )}
 
@@ -185,19 +270,13 @@ function WorkerPanel() {
           className={activeTab === 'info' ? 'tab-active' : ''}
           onClick={() => setActiveTab('info')}
         >
-          📋 Bilgilerim
+          📋 My Information
         </button>
         <button 
           className={activeTab === 'activity' ? 'tab-active' : ''}
           onClick={() => setActiveTab('activity')}
         >
-          📊 Aktiviteler
-        </button>
-        <button 
-          className={activeTab === 'actions' ? 'tab-active' : ''}
-          onClick={() => setActiveTab('actions')}
-        >
-          ⚡ İşlemler
+          📊 Activities
         </button>
       </div>
 
@@ -205,21 +284,21 @@ function WorkerPanel() {
         {activeTab === 'info' && (
           <div className="info-grid">
             <div className="info-card">
-              <h3>👤 Kişisel Bilgiler</h3>
+              <h3>👤 Personal Information</h3>
               <div className="info-row">
-                <span className="label">Kart No:</span>
+                <span className="label">Card No:</span>
                 <span className="value">{workerCard.card_number}</span>
               </div>
               <div className="info-row">
-                <span className="label">Ad Soyad:</span>
+                <span className="label">Full Name:</span>
                 <span className="value">{workerCard.name}</span>
               </div>
               <div className="info-row">
-                <span className="label">Departman:</span>
+                <span className="label">Department:</span>
                 <span className="value">{workerCard.department}</span>
               </div>
               <div className="info-row">
-                <span className="label">Adres:</span>
+                <span className="label">Address:</span>
                 <span className="value address">
                   {workerCard.worker_address.slice(0, 8)}...{workerCard.worker_address.slice(-6)}
                 </span>
@@ -227,25 +306,36 @@ function WorkerPanel() {
             </div>
 
             <div className="info-card">
-              <h3>📊 İstatistikler</h3>
+              <h3>📊 Statistics</h3>
               <div className="stat-box">
                 <span className="stat-icon">🕐</span>
                 <div className="stat-details">
-                  <span className="stat-label">Toplam Çalışma Saati</span>
-                  <span className="stat-value">{formatWorkHours(workerCard.total_work_hours)}</span>
+                  <span className="stat-label">Total Working Hours</span>
+                  <span className="stat-value">
+                    {shiftActive 
+                      ? formatWorkHours(currentWorkTime)
+                      : formatWorkHours(workerCard.total_work_hours)
+                    }
+                  </span>
+                  {shiftActive && (
+                    <div className="stat-small live-indicator">🔴 Live - Shift Active</div>
+                  )}
                 </div>
               </div>
               <div className="stat-box">
                 <span className="stat-icon">📦</span>
                 <div className="stat-details">
-                  <span className="stat-label">Toplam Üretim</span>
-                  <span className="stat-value">{workerCard.total_production} adet</span>
+                  <span className="stat-label">Total Production</span>
+                  <span className="stat-value">{workerCard.total_production} items</span>
+                  {localProductionCount > 0 && (
+                    <div className="stat-small">Session additions: {localProductionCount} items</div>
+                  )}
                 </div>
               </div>
               <div className="stat-box">
                 <span className="stat-icon">⚡</span>
                 <div className="stat-details">
-                  <span className="stat-label">Verimlilik Skoru</span>
+                  <span className="stat-label">Efficiency Score</span>
                   <span className="stat-value">{workerCard.efficiency_score}%</span>
                 </div>
               </div>
@@ -256,28 +346,44 @@ function WorkerPanel() {
         {activeTab === 'activity' && (
           <div className="activity-section">
             <div className="activity-card">
-              <h3>🚪 Kapı Geçişleri</h3>
+              <h3>🚪 Door Access</h3>
               <div className="activity-list">
-                {doorEvents.length === 0 ? (
-                  <p className="no-data">Henüz kapı geçişi kaydı yok</p>
+                {allDoorEvents.length === 0 ? (
+                  <p className="no-data">No door access records yet</p>
                 ) : (
-                  doorEvents.slice(0, 10).map((event, i) => {
-                    const data = event.parsedJson as any
+                  allDoorEvents.slice(0, 10).map((event, i) => {
+                    // Check if it's a localStorage entry or blockchain event
+                    const isLocalEntry = !event.parsedJson
+                    const data = isLocalEntry ? event : (event.parsedJson as any)
+                    
+                    // Decode door_name safely
+                    let doorName = 'Unknown Door'
+                    try {
+                      if (data.door_name) {
+                        doorName = typeof data.door_name === 'string' 
+                          ? data.door_name 
+                          : new TextDecoder().decode(new Uint8Array(data.door_name))
+                      }
+                    } catch (e) {
+                      doorName = `Door ${data.door_id || 0}`
+                    }
+                    
+                    const timestamp = isLocalEntry ? data.timestamp : Number(data.timestamp)
+                    const isEntry = data.is_entry
+                    
                     return (
-                      <div key={i} className="activity-item">
+                      <div key={`door-${i}-${timestamp}`} className="activity-item">
                         <span className="activity-icon">
-                          {data.access_type === 2 ? '➡️' : '⬅️'}
+                          {isEntry ? '➡️' : '⬅️'}
                         </span>
                         <div className="activity-details">
-                          <span className="activity-title">
-                            {new TextDecoder().decode(new Uint8Array(data.door_name))}
-                          </span>
+                          <span className="activity-title">{doorName}</span>
                           <span className="activity-time">
-                            {new Date(Number(data.timestamp_ms)).toLocaleString('tr-TR')}
+                            {new Date(timestamp).toLocaleString('tr-TR')}
                           </span>
                         </div>
-                        <span className={`activity-badge ${data.access_type === 2 ? 'entry' : 'exit'}`}>
-                          {data.access_type === 2 ? 'Giriş' : 'Çıkış'}
+                        <span className={`activity-badge ${isEntry ? 'entry' : 'exit'}`}>
+                          {isEntry ? 'Entry' : 'Exit'}
                         </span>
                       </div>
                     )
@@ -287,25 +393,35 @@ function WorkerPanel() {
             </div>
 
             <div className="activity-card">
-              <h3>⚙️ Makine Kullanımı</h3>
+              <h3>⚙️ Machine Usage</h3>
               <div className="activity-list">
                 {machineEvents.length === 0 ? (
-                  <p className="no-data">Henüz makine kullanım kaydı yok</p>
+                  <p className="no-data">No machine usage records yet</p>
                 ) : (
                   machineEvents.slice(0, 10).map((event, i) => {
                     const data = event.parsedJson as any
+                    // Decode machine_name safely
+                    let machineName = 'Unknown Machine'
+                    try {
+                      if (data.machine_name) {
+                        machineName = typeof data.machine_name === 'string' 
+                          ? data.machine_name 
+                          : new TextDecoder().decode(new Uint8Array(data.machine_name))
+                      }
+                    } catch (e) {
+                      machineName = `Machine ${data.machine_id || 0}`
+                    }
+                    
                     return (
                       <div key={i} className="activity-item">
                         <span className="activity-icon">⚙️</span>
                         <div className="activity-details">
-                          <span className="activity-title">
-                            {new TextDecoder().decode(new Uint8Array(data.machine_name))}
-                          </span>
+                          <span className="activity-title">{machineName}</span>
                           <span className="activity-subtitle">
-                            Üretim: {data.production_count} | Verim: {data.efficiency_percentage}%
+                            Production: {data.production_count || 0} | Efficiency: {data.efficiency_percentage || 0}%
                           </span>
                           <span className="activity-time">
-                            {new Date(Number(data.timestamp_ms)).toLocaleString('tr-TR')}
+                            {new Date(Number(data.timestamp)).toLocaleString('tr-TR')}
                           </span>
                         </div>
                       </div>
@@ -316,24 +432,26 @@ function WorkerPanel() {
             </div>
 
             <div className="activity-card">
-              <h3>🕐 Mesai Kayıtları</h3>
+              <h3>🕐 Shift Records</h3>
               <div className="activity-list">
                 {clockEvents.length === 0 ? (
-                  <p className="no-data">Henüz mesai kaydı yok</p>
+                  <p className="no-data">No shift records yet</p>
                 ) : (
                   clockEvents.slice(0, 10).map((event, i) => {
                     const data = event.parsedJson as any
+                    const isClockIn = data.action_type === 0 || data.action_type === '0'
+                    
                     return (
                       <div key={i} className="activity-item">
                         <span className="activity-icon">
-                          {data.action_type === 0 ? '🕐' : '🏁'}
+                          {isClockIn ? '🕐' : '🏁'}
                         </span>
                         <div className="activity-details">
                           <span className="activity-title">
-                            {data.action_type === 0 ? 'Mesai Başlangıcı' : 'Mesai Bitişi'}
+                            {isClockIn ? 'Shift Start' : 'Shift End'}
                           </span>
                           <span className="activity-time">
-                            {new Date(Number(data.timestamp_ms)).toLocaleString('tr-TR')}
+                            {new Date(Number(data.timestamp)).toLocaleString('tr-TR')}
                           </span>
                         </div>
                       </div>
@@ -345,90 +463,7 @@ function WorkerPanel() {
           </div>
         )}
 
-        {activeTab === 'actions' && (
-          <div className="actions-grid">
-            <div className="action-card">
-              <h3>🚪 Kapı Geçişi Kaydet</h3>
-              <form onSubmit={handleDoorAccess}>
-                <div className="form-group">
-                  <label>Kapı ID</label>
-                  <input
-                    type="number"
-                    placeholder="0"
-                    value={doorForm.door_id}
-                    onChange={(e) => setDoorForm({ ...doorForm, door_id: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Geçiş Türü</label>
-                  <select
-                    value={doorForm.access_type}
-                    onChange={(e) => setDoorForm({ ...doorForm, access_type: e.target.value })}
-                  >
-                    <option value="2">Giriş</option>
-                    <option value="3">Çıkış</option>
-                  </select>
-                </div>
-                <button type="submit" className="submit-btn" disabled={txLoading}>
-                  {txLoading ? 'İşleniyor...' : 'Kaydet'}
-                </button>
-              </form>
-            </div>
-
-            <div className="action-card">
-              <h3>⚙️ Makine Kullanımı Kaydet</h3>
-              <form onSubmit={handleMachineUsage}>
-                <div className="form-group">
-                  <label>Makine ID</label>
-                  <input
-                    type="number"
-                    placeholder="0"
-                    value={machineForm.machine_id}
-                    onChange={(e) => setMachineForm({ ...machineForm, machine_id: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Kullanım Süresi (saat)</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    placeholder="8.5"
-                    value={machineForm.usage_duration_hours}
-                    onChange={(e) => setMachineForm({ ...machineForm, usage_duration_hours: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Üretim Miktarı</label>
-                  <input
-                    type="number"
-                    placeholder="100"
-                    value={machineForm.production_count}
-                    onChange={(e) => setMachineForm({ ...machineForm, production_count: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Verimlilik (%)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    placeholder="90"
-                    value={machineForm.efficiency_percentage}
-                    onChange={(e) => setMachineForm({ ...machineForm, efficiency_percentage: e.target.value })}
-                    required
-                  />
-                </div>
-                <button type="submit" className="submit-btn" disabled={txLoading}>
-                  {txLoading ? 'İşleniyor...' : 'Kaydet'}
-                </button>
-              </form>
-            </div>
-          </div>
-        )}
+        
       </div>
     </div>
   )

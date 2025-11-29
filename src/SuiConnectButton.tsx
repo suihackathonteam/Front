@@ -1,10 +1,9 @@
 import { ConnectButton } from '@mysten/dapp-kit'
 
 function SuiConnectButton() {
-
   return (
     <ConnectButton 
-      connectText="Cüzdan Bağla"
+      connectText="Connect Wallet"
     />
   )
 }

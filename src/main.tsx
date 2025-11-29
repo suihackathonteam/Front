@@ -7,7 +7,6 @@ import '@mysten/dapp-kit/dist/index.css'
 import './index.css'
 import App from './App.tsx'
 
-// Sui network yapılandırması
 const { networkConfig } = createNetworkConfig({
   localnet: { url: getFullnodeUrl('localnet') },
   devnet: { url: getFullnodeUrl('devnet') },

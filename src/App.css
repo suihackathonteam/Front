@@ -65,7 +65,7 @@
   align-items: center;
 }
 
-/* Sui Connect Button Özelleştirmesi */
+/* Sui Connect Button Customization */
 .sui-connect-wrapper button {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
   color: #fff !important;

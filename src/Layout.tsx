@@ -24,13 +24,13 @@ function Layout() {
           </div>
 
           <nav className={`dashboard-nav`}>
-            <a onClick={() => navigate('/')}>🏠 Ana Sayfa</a>
-            <a onClick={() => navigate('/about')}>📖 Hakkımızda</a>
-            <a onClick={() => navigate('/services')}>💼 Hizmetler</a>
+            <a onClick={() => navigate('/')}>🏠 Home</a>
+            <a onClick={() => navigate('/about')}>📖 About</a>
+            <a onClick={() => navigate('/services')}>💼 Services</a>
             {currentAccount && (
               <>
                 <a onClick={() => navigate('/dashboard')}>📊 Dashboard</a>
-                <a onClick={() => navigate('/worker')}>👤 Çalışan</a>
+                <a onClick={() => navigate('/worker')}>👤 Worker</a>
               </>
             )}
             {isAdmin && (
@@ -45,7 +45,7 @@ function Layout() {
             {currentAccount && (
               <>
                 <button className="logout-btn" onClick={handleLogout}>
-                  Çıkış Yap
+                  Logout
                 </button>
               </>
             )}
@@ -58,7 +58,7 @@ function Layout() {
       </main>
 
       <footer className="dashboard-footer">
-        <p>&copy; 2025 TeamPro. Tüm hakları saklıdır.</p>
+        <p>&copy; 2025 TeamPro. All rights reserved.</p>
       </footer>
     </div>
   )
