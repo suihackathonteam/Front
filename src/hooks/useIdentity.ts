@@ -183,83 +183,78 @@ export function useDoors() {
     const [error, setError] = useState<string | null>(null);
 
     const fetchDoors = useCallback(async () => {
-            try {
-                setLoading(true);
-                setError(null);
+        try {
+            setLoading(true);
+            setError(null);
 
-                // Fetch the SystemRegistry object
-                const registry = await client.getObject({
-                    id: CONTRACT_CONFIG.SYSTEM_REGISTRY_ID,
-                    options: { showContent: true },
-                });
+            // Fetch the SystemRegistry object
+            const registry = await client.getObject({
+                id: CONTRACT_CONFIG.SYSTEM_REGISTRY_ID,
+                options: { showContent: true },
+            });
 
-                if (!registry.data?.content || registry.data.content.dataType !== "moveObject") {
-                    setDoors([]);
-                    return;
-                }
-
-                const fields = registry.data.content.fields as RegistryFields;
-                const doorsTableId = fields.doors?.fields?.id?.id;
-
-                if (!doorsTableId) {
-                    setDoors([]);
-                    return;
-                }
-
-                // Fetch dynamic fields (doors from the table)
-                const dynamicFields = await client.getDynamicFields({
-                    parentId: doorsTableId,
-                });
-
-                const doorPromises = dynamicFields.data.map(async (field) => {
-                    try {
-                        const doorObject = await client.getDynamicFieldObject({
-                            parentId: doorsTableId,
-                            name: {
-                                type: "u64",
-                                value: field.name.value,
-                            },
-                        });
-
-                        if (doorObject.data?.content && doorObject.data.content.dataType === "moveObject") {
-                            const doorData = doorObject.data.content.fields as Record<string, unknown>;
-
-                            // Data is in value.fields structure
-                            const valueData = doorData.value as Record<string, unknown>;
-                            const fields = valueData?.fields as Record<string, unknown>;
-
-                            if (!fields) {
-                                console.warn("Door fields not found:", doorData);
-                                return null;
-                            }
-
-                            const decoder = new TextDecoder();
-
-                            return {
-                                door_id: Number(fields.door_id),
-                                name: Array.isArray(fields.name)
-                                    ? decoder.decode(new Uint8Array(fields.name as number[]))
-                                    : String(fields.name || "Unknown Door"),
-                                location: Array.isArray(fields.location)
-                                    ? decoder.decode(new Uint8Array(fields.location as number[]))
-                                    : String(fields.location || "Unknown Location"),
-                                is_active: Boolean(fields.is_active),
-                            } as Door;
-                        }
-                        return null;
-                    } catch (err) {
-                        console.error("Error fetching door:", err);
-                        return null;
-                    }
-                });
-                const doorsData = await Promise.all(doorPromises);
-                setDoors(doorsData.filter((d): d is Door => d !== null));
-            } catch (err) {
-                console.error("Error fetching doors:", err);
-                setError(err instanceof Error ? err.message : "Failed to fetch doors");
-            } finally {
-                setLoading(false);
+            if (!registry.data?.content || registry.data.content.dataType !== "moveObject") {
+                setDoors([]);
+                return;
             }
+
+            const fields = registry.data.content.fields as RegistryFields;
+            const doorsTableId = fields.doors?.fields?.id?.id;
+
+            if (!doorsTableId) {
+                setDoors([]);
+                return;
+            }
+
+            // Fetch dynamic fields (doors from the table)
+            const dynamicFields = await client.getDynamicFields({
+                parentId: doorsTableId,
+            });
+
+            const doorPromises = dynamicFields.data.map(async (field) => {
+                try {
+                    const doorObject = await client.getDynamicFieldObject({
+                        parentId: doorsTableId,
+                        name: field.name,
+                    });
+
+                    if (doorObject.data?.content && doorObject.data.content.dataType === "moveObject") {
+                        const doorData = doorObject.data.content.fields as Record<string, unknown>;
+
+                        // Data is in value.fields structure
+                        const valueData = doorData.value as Record<string, unknown>;
+                        const fields = valueData?.fields as Record<string, unknown>;
+
+                        if (!fields) {
+                            console.warn("Door fields not found:", doorData);
+                            return null;
+                        }
+
+                        const decoder = new TextDecoder();
+
+                        return {
+                            door_id: Number(fields.door_id),
+                            name: Array.isArray(fields.name) ? decoder.decode(new Uint8Array(fields.name as number[])) : String(fields.name || "Unknown Door"),
+                            location: Array.isArray(fields.location)
+                                ? decoder.decode(new Uint8Array(fields.location as number[]))
+                                : String(fields.location || "Unknown Location"),
+                            is_active: Boolean(fields.is_active),
+                        } as Door;
+                    }
+                    return null;
+                } catch (err) {
+                    console.error("Error fetching door:", err);
+                    return null;
+                }
+            });
+            const doorsData = await Promise.all(doorPromises);
+            setDoors(doorsData.filter((d): d is Door => d !== null));
+        } catch (err) {
+            console.error("Error fetching doors:", err);
+            setError(err instanceof Error ? err.message : "Failed to fetch doors");
+        } finally {
+            setLoading(false);
+        }
     }, [client]);
 
     useEffect(() => {
@@ -279,89 +274,86 @@ export function useMachines() {
     const [error, setError] = useState<string | null>(null);
 
     const fetchMachines = useCallback(async () => {
-            try {
-                setLoading(true);
-                setError(null);
+        try {
+            setLoading(true);
+            setError(null);
 
-                // Fetch the SystemRegistry object
-                const registry = await client.getObject({
-                    id: CONTRACT_CONFIG.SYSTEM_REGISTRY_ID,
-                    options: { showContent: true },
-                });
+            // Fetch the SystemRegistry object
+            const registry = await client.getObject({
+                id: CONTRACT_CONFIG.SYSTEM_REGISTRY_ID,
+                options: { showContent: true },
+            });
 
-                if (!registry.data?.content || registry.data.content.dataType !== "moveObject") {
-                    setMachines([]);
-                    return;
-                }
-
-                const fields = registry.data.content.fields as RegistryFields;
-                const machinesTableId = fields.machines?.fields?.id?.id;
-
-                if (!machinesTableId) {
-                    setMachines([]);
-                    return;
-                }
-
-                // Fetch dynamic fields (machines from the table)
-                const dynamicFields = await client.getDynamicFields({
-                    parentId: machinesTableId,
-                });
-
-                const machinePromises = dynamicFields.data.map(async (field) => {
-                    try {
-                        const machineObject = await client.getDynamicFieldObject({
-                            parentId: machinesTableId,
-                            name: {
-                                type: "u64",
-                                value: field.name.value,
-                            },
-                        });
-
-                        if (machineObject.data?.content && machineObject.data.content.dataType === "moveObject") {
-                            const machineData = machineObject.data.content.fields as Record<string, unknown>;
-
-                            // Data is in value.fields structure
-                            const valueData = machineData.value as Record<string, unknown>;
-                            const fields = valueData?.fields as Record<string, unknown>;
-
-                            if (!fields) {
-                                console.warn("Machine fields not found:", machineData);
-                                return null;
-                            }
-
-                            const decoder = new TextDecoder();
-
-                            return {
-                                machine_id: Number(fields.machine_id),
-                                name: Array.isArray(fields.name)
-                                    ? decoder.decode(new Uint8Array(fields.name as number[]))
-                                    : String(fields.name || "Unknown Machine"),
-                                machine_type: Array.isArray(fields.machine_type)
-                                    ? decoder.decode(new Uint8Array(fields.machine_type as number[]))
-                                    : String(fields.machine_type || "Unknown Type"),
-                                location: Array.isArray(fields.location)
-                                    ? decoder.decode(new Uint8Array(fields.location as number[]))
-                                    : String(fields.location || "Unknown Location"),
-                                is_active: Boolean(fields.is_active),
-                                total_usage_time_ms: Number(fields.total_usage_time_ms || 0),
-                                total_production: Number(fields.total_production || 0),
-                            } as Machine;
-                        }
-                        return null;
-                    } catch (err) {
-                        console.error("Error fetching machine:", err);
-                        return null;
-                    }
-                });
-
-                const machinesData = await Promise.all(machinePromises);
-                setMachines(machinesData.filter((m): m is Machine => m !== null));
-            } catch (err) {
-                console.error("Error fetching machines:", err);
-                setError(err instanceof Error ? err.message : "Failed to fetch machines");
-            } finally {
-                setLoading(false);
+            if (!registry.data?.content || registry.data.content.dataType !== "moveObject") {
+                setMachines([]);
+                return;
             }
+
+            const fields = registry.data.content.fields as RegistryFields;
+            const machinesTableId = fields.machines?.fields?.id?.id;
+
+            if (!machinesTableId) {
+                setMachines([]);
+                return;
+            }
+
+            // Fetch dynamic fields (machines from the table)
+            const dynamicFields = await client.getDynamicFields({
+                parentId: machinesTableId,
+            });
+
+            const machinePromises = dynamicFields.data.map(async (field) => {
+                try {
+                    const machineObject = await client.getDynamicFieldObject({
+                        parentId: machinesTableId,
+                        name: field.name,
+                    });
+
+                    if (machineObject.data?.content && machineObject.data.content.dataType === "moveObject") {
+                        const machineData = machineObject.data.content.fields as Record<string, unknown>;
+
+                        // Data is in value.fields structure
+                        const valueData = machineData.value as Record<string, unknown>;
+                        const fields = valueData?.fields as Record<string, unknown>;
+
+                        if (!fields) {
+                            console.warn("Machine fields not found:", machineData);
+                            return null;
+                        }
+
+                        const decoder = new TextDecoder();
+
+                        return {
+                            machine_id: Number(fields.machine_id),
+                            name: Array.isArray(fields.name)
+                                ? decoder.decode(new Uint8Array(fields.name as number[]))
+                                : String(fields.name || "Unknown Machine"),
+                            machine_type: Array.isArray(fields.machine_type)
+                                ? decoder.decode(new Uint8Array(fields.machine_type as number[]))
+                                : String(fields.machine_type || "Unknown Type"),
+                            location: Array.isArray(fields.location)
+                                ? decoder.decode(new Uint8Array(fields.location as number[]))
+                                : String(fields.location || "Unknown Location"),
+                            is_active: Boolean(fields.is_active),
+                            total_usage_time_ms: Number(fields.total_usage_time_ms || 0),
+                            total_production: Number(fields.total_production || 0),
+                        } as Machine;
+                    }
+                    return null;
+                } catch (err) {
+                    console.error("Error fetching machine:", err);
+                    return null;
+                }
+            });
+
+            const machinesData = await Promise.all(machinePromises);
+            setMachines(machinesData.filter((m): m is Machine => m !== null));
+        } catch (err) {
+            console.error("Error fetching machines:", err);
+            setError(err instanceof Error ? err.message : "Failed to fetch machines");
+        } finally {
+            setLoading(false);
+        }
     }, [client]);
 
     useEffect(() => {
@@ -384,7 +376,7 @@ export function useIdentityEvents(eventType: string) {
             try {
                 setLoading(true);
 
-                if (eventType) {
+                if (eventType && eventType !== "*") {
                     // Query specific event type
                     const eventQuery = await client.queryEvents({
                         query: {
@@ -788,10 +780,11 @@ export function useRecentAwards() {
 }
 
 /**
- * All Worker Cards hook - fetches all registered worker cards from SystemRegistry
+ * All Worker Cards hook - fetches worker cards from current account + recent activity
  */
 export function useAllWorkerCards() {
     const client = useSuiClient();
+    const account = useCurrentAccount();
     const [workerCards, setWorkerCards] = useState<WorkerCard[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -801,43 +794,54 @@ export function useAllWorkerCards() {
             setLoading(true);
             setError(null);
 
-            // Fetch the SystemRegistry object
-            const registry = await client.getObject({
-                id: CONTRACT_CONFIG.SYSTEM_REGISTRY_ID,
-                options: { showContent: true },
-            });
+            const workerAddresses = new Set<string>();
 
-            if (!registry.data?.content || registry.data.content.dataType !== "moveObject") {
-                setWorkerCards([]);
-                return;
+            // Add current user if they have account
+            if (account?.address) {
+                workerAddresses.add(account.address);
             }
 
-            const fields = registry.data.content.fields as RegistryFields;
-            const workerCardsTableId = fields.worker_cards?.fields?.id?.id;
+            // Try to get addresses from different event types
+            const eventTypes = ["WorkerCardIssuedEvent", "ClockEvent", "DoorAccessEvent", "MachineUsageEvent", "AwardEvent"];
 
-            if (!workerCardsTableId) {
-                setWorkerCards([]);
-                return;
-            }
-
-            // Fetch dynamic fields (worker cards from the table)
-            const dynamicFields = await client.getDynamicFields({
-                parentId: workerCardsTableId,
-            });
-
-            const cardPromises = dynamicFields.data.map(async (field) => {
+            for (const eventType of eventTypes) {
                 try {
-                    const cardObj = await client.getObject({
-                        id: field.objectId,
+                    const events = await client.queryEvents({
+                        query: {
+                            MoveEventType: `${CONTRACT_CONFIG.PACKAGE_ID}::identity::${eventType}`,
+                        },
+                        limit: 100,
+                    });
+
+                    events.data.forEach((event: any) => {
+                        if (event.parsedJson?.worker_address) {
+                            workerAddresses.add(event.parsedJson.worker_address);
+                        }
+                    });
+                } catch (err) {
+                    console.warn(`Failed to fetch ${eventType}:`, err);
+                }
+            }
+
+            console.log(`Found ${workerAddresses.size} unique worker addresses`);
+
+            // Fetch worker cards for each address
+            const cardPromises = Array.from(workerAddresses).map(async (address) => {
+                try {
+                    const objects = await client.getOwnedObjects({
+                        owner: address,
+                        filter: {
+                            StructType: `${CONTRACT_CONFIG.PACKAGE_ID}::identity::WorkerCard`,
+                        },
                         options: { showContent: true },
                     });
 
-                    if (cardObj.data?.content && cardObj.data.content.dataType === "moveObject") {
-                        const cardFields = (cardObj.data.content as any).fields.value.fields;
+                    if (objects.data.length > 0 && objects.data[0].data?.content && objects.data[0].data.content.dataType === "moveObject") {
+                        const cardFields = (objects.data[0].data.content as any).fields;
                         const decoder = new TextDecoder();
-                        
+
                         return {
-                            id: field.objectId,
+                            id: objects.data[0].data.objectId,
                             worker_address: cardFields.worker_address || "",
                             card_number: cardFields.card_number ? decoder.decode(new Uint8Array(cardFields.card_number)) : "",
                             name: cardFields.name ? decoder.decode(new Uint8Array(cardFields.name)) : "",
@@ -853,12 +857,13 @@ export function useAllWorkerCards() {
                     }
                     return null;
                 } catch (err) {
-                    console.warn("Error fetching individual worker card:", err);
+                    console.warn(`Error fetching worker card for ${address}:`, err);
                     return null;
                 }
             });
 
             const cards = (await Promise.all(cardPromises)).filter((card): card is WorkerCard => card !== null);
+            console.log(`Successfully fetched ${cards.length} worker cards`);
             setWorkerCards(cards);
         } catch (err) {
             console.error("Error fetching worker cards:", err);
@@ -867,7 +872,7 @@ export function useAllWorkerCards() {
         } finally {
             setLoading(false);
         }
-    }, [client]);
+    }, [client, account?.address]);
 
     useEffect(() => {
         fetchWorkerCards();
@@ -877,4 +882,102 @@ export function useAllWorkerCards() {
     }, [fetchWorkerCards]);
 
     return { workerCards, loading, error, refetch: fetchWorkerCards };
+}
+
+/**
+ * Dashboard Statistics Hook - Get real-time statistics from the contract
+ */
+export function useDashboardStats() {
+    const client = useSuiClient();
+    const [stats, setStats] = useState({
+        activeWorkersCount: 0,
+        activeMachinesCount: 0,
+        totalProduction: 0,
+        todaysEntries: 0,
+    });
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const fetchStats = useCallback(async () => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            const currentTime = Date.now();
+
+            // Use multiGetObjects to get registry data
+            const registry = await client.getObject({
+                id: CONTRACT_CONFIG.SYSTEM_REGISTRY_ID,
+                options: {
+                    showContent: true,
+                },
+            });
+
+            if (!registry.data?.content || registry.data.content.dataType !== "moveObject") {
+                throw new Error("Failed to fetch registry");
+            }
+
+            const fields = registry.data.content.fields as any;
+
+            // Get counters from registry
+            const doorCounter = Number(fields.door_counter || 0);
+            const machineCounter = Number(fields.machine_counter || 0);
+
+            // Count active machines from doors and machines tables
+            const doorsTableId = fields.doors?.fields?.id?.id;
+            const machinesTableId = fields.machines?.fields?.id?.id;
+
+            let activeMachines = 0;
+            if (machinesTableId) {
+                const machineFields = await client.getDynamicFields({
+                    parentId: machinesTableId,
+                });
+                activeMachines = machineFields.data.length;
+            }
+
+            // Get recent machine usage for production count
+            const recentMachineUsage = fields.recent_machine_usage || [];
+            let totalProduction = 0;
+            if (Array.isArray(recentMachineUsage)) {
+                totalProduction = recentMachineUsage.reduce((sum: number, record: any) => {
+                    return sum + Number(record.production_count || 0);
+                }, 0);
+            }
+
+            // Get recent door access for today's entries
+            const recentDoorAccess = fields.recent_door_access || [];
+            let todaysEntries = 0;
+            const dayInMs = 86400000;
+            const cutoffTime = currentTime - dayInMs;
+
+            if (Array.isArray(recentDoorAccess)) {
+                todaysEntries = recentDoorAccess.filter((record: any) => {
+                    const timestamp = Number(record.timestamp_ms || 0);
+                    const accessType = Number(record.access_type || 0);
+                    return timestamp >= cutoffTime && accessType === 2; // 2 = DOOR_ENTRY
+                }).length;
+            }
+
+            setStats({
+                activeWorkersCount: 0, // Will be calculated from worker cards
+                activeMachinesCount: activeMachines,
+                totalProduction: totalProduction,
+                todaysEntries: todaysEntries,
+            });
+        } catch (err) {
+            console.error("Error fetching dashboard stats:", err);
+            setError(err instanceof Error ? err.message : "Unknown error");
+        } finally {
+            setLoading(false);
+        }
+    }, [client]);
+
+    useEffect(() => {
+        fetchStats();
+        // Refresh every 10 seconds for real-time updates
+        const interval = setInterval(fetchStats, 10000);
+        return () => clearInterval(interval);
+    }, [fetchStats]);
+
+    return { stats, loading, error, refetch: fetchStats };
 }

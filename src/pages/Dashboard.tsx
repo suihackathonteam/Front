@@ -4,7 +4,7 @@ import "../styles/Home.css";
 import "../styles/DashboardEnhanced.css";
 import { useCurrentAccount } from "@mysten/dapp-kit";
 import SuiConnectButton from "../components/SuiConnectButton";
-import { useIdentityEvents, useDoors, useMachines, useAllWorkerCards } from "../hooks/useIdentity";
+import { useIdentityEvents, useDoors, useMachines, useAllWorkerCards, useDashboardStats } from "../hooks/useIdentity";
 import type { EventData } from "../types/sui";
 import StatCard from "../components/dashboard/StatCard";
 import DoorAccessChart from "../components/dashboard/DoorAccessChart";
@@ -29,13 +29,12 @@ function Dashboard() {
     const { doors, loading: doorsLoading } = useDoors();
     const { machines, loading: machinesLoading } = useMachines();
     const { workerCards: rawWorkerCards, loading: loadingCards } = useAllWorkerCards();
+    const { stats: contractStats, loading: statsLoading } = useDashboardStats();
 
     // Enrich worker cards with event counts for EmployeeList component
     const workerCards = useMemo(() => {
-        return rawWorkerCards.map(card => {
-            const eventCount = allEvents.filter((event: any) => 
-                isValidEvent(event) && event.parsedJson?.worker_address === card.worker_address
-            ).length;
+        return rawWorkerCards.map((card) => {
+            const eventCount = allEvents.filter((event: any) => isValidEvent(event) && event.parsedJson?.worker_address === card.worker_address).length;
             return { ...card, event_count: eventCount };
         });
     }, [rawWorkerCards, allEvents]);
@@ -58,7 +57,7 @@ function Dashboard() {
         });
         return { doorEvents, machineEvents, clockEvents, awardEvents };
     }, [allEvents]);
-    
+
     const doorAccessData = useMemo(() => {
         const hourlyData: { [key: string]: { entries: number; exits: number } } = {};
         parsedEvents.doorEvents.forEach((event) => {
@@ -68,20 +67,23 @@ function Dashboard() {
             if (Number(event.access_type) === 2) hourlyData[timeKey].entries++;
             else hourlyData[timeKey].exits++;
         });
-        return Object.entries(hourlyData).map(([time, data]) => ({ time, ...data })).sort((a, b) => a.time.localeCompare(b.time));
+        return Object.entries(hourlyData)
+            .map(([time, data]) => ({ time, ...data }))
+            .sort((a, b) => a.time.localeCompare(b.time));
     }, [parsedEvents.doorEvents]);
 
     const machineUsageData = useMemo(() => {
         const machineStats: { [key: string]: any } = {};
         parsedEvents.machineEvents.forEach((event) => {
             const machineId = String(event.machine_id);
-            if (!machineStats[machineId]) machineStats[machineId] = { name: `Machine ${machineId}`, totalDuration: 0, totalProduction: 0, count: 0, totalEfficiency: 0 };
+            if (!machineStats[machineId])
+                machineStats[machineId] = { name: `Machine ${machineId}`, totalDuration: 0, totalProduction: 0, count: 0, totalEfficiency: 0 };
             machineStats[machineId].totalDuration += Number(event.usage_duration_ms || 0);
             machineStats[machineId].totalProduction += Number(event.production_count || 0);
             machineStats[machineId].totalEfficiency += Number(event.efficiency_percentage || 0);
             machineStats[machineId].count++;
         });
-        return Object.values(machineStats).map(stats => ({
+        return Object.values(machineStats).map((stats) => ({
             machine: stats.name,
             usage: (stats.totalDuration / 3600000).toFixed(1),
             production: stats.totalProduction,
@@ -90,13 +92,21 @@ function Dashboard() {
     }, [parsedEvents.machineEvents]);
 
     const realtimeStats = useMemo(() => {
-        const activeWorkers = workerCards.filter(card => card.is_active).length;
-        const totalProduction = workerCards.reduce((acc, card) => acc + (card.total_production || 0), 0);
-        const activeMachines = machines.filter(m => m.is_active).length;
-        const todaysEntries = parsedEvents.doorEvents.filter(e => 
-            new Date(e.timestamp).toDateString() === new Date().toDateString() && 
-            Number(e.access_type) === 2
-        ).length;
+        // Active workers count from worker cards (only check is_active, not is_in_shift)
+        const activeWorkers = workerCards.filter((card) => card.is_active).length;
+
+        // Use contract stats for machines, production, and entries
+        // Fall back to local calculation if contract stats are not available
+        const activeMachines = contractStats.activeMachinesCount > 0 ? contractStats.activeMachinesCount : machines.filter((m) => m.is_active).length;
+
+        const totalProduction =
+            contractStats.totalProduction > 0 ? contractStats.totalProduction : workerCards.reduce((acc, card) => acc + (card.total_production || 0), 0);
+
+        const todaysEntries =
+            contractStats.todaysEntries > 0
+                ? contractStats.todaysEntries
+                : parsedEvents.doorEvents.filter((e) => new Date(e.timestamp).toDateString() === new Date().toDateString() && Number(e.access_type) === 2)
+                      .length;
 
         return [
             { title: "Active Workers", value: activeWorkers, icon: "👷" },
@@ -104,16 +114,14 @@ function Dashboard() {
             { title: "Total Production", value: totalProduction, icon: "📦" },
             { title: "Today's Entries", value: todaysEntries, icon: "🚪" },
         ];
-    }, [workerCards, machines, parsedEvents.doorEvents]);
+    }, [workerCards, machines, parsedEvents.doorEvents, contractStats]);
 
     if (!currentAccount) {
         return (
-            <div className="text-center" style={{ paddingTop: '5rem' }}>
-                <div className="card" style={{ maxWidth: '500px', margin: '0 auto', padding: '3rem 2rem' }}>
-                    <h2 style={{ marginBottom: '1rem' }}>Connect Your Wallet</h2>
-                    <p style={{ color: 'var(--text-color-secondary)', marginBottom: '2rem' }}>
-                        Connect your Sui wallet to access the dashboard.
-                    </p>
+            <div className="text-center" style={{ paddingTop: "5rem" }}>
+                <div className="card" style={{ maxWidth: "500px", margin: "0 auto", padding: "3rem 2rem" }}>
+                    <h2 style={{ marginBottom: "1rem" }}>Connect Your Wallet</h2>
+                    <p style={{ color: "var(--text-color-secondary)", marginBottom: "2rem" }}>Connect your Sui wallet to access the dashboard.</p>
                     <SuiConnectButton />
                 </div>
             </div>
@@ -138,81 +146,95 @@ function Dashboard() {
                 <div className="gradient-orb orb-3"></div>
             </div>
 
-            <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem' }}>
-            <div className="dashboard-hero">
-                <div className="hero-card-wrapper hero-entrance">
-                    <div className="hero-card dashboard-hero-card">
-                        <h1>Dashboard</h1>
-                        <p>Real-time factory tracking & insights</p>
-                        <div className="tabs hero-tabs">
-                    <button className={`tab ${selectedView === "overview" ? "tab-active" : ""}`} onClick={() => setSelectedView("overview")}>Overview</button>
-                    <button className={`tab ${selectedView === "doors" ? "tab-active" : ""}`} onClick={() => setSelectedView("doors")}>Doors</button>
-                    <button className={`tab ${selectedView === "machines" ? "tab-active" : ""}`} onClick={() => setSelectedView("machines")}>Devices</button>
-                    <button className={`tab ${selectedView === "employees" ? "tab-active" : ""}`} onClick={() => setSelectedView("employees")}>Employees</button>
+            <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "2rem" }}>
+                <div className="dashboard-hero">
+                    <div className="hero-card-wrapper hero-entrance">
+                        <div className="hero-card dashboard-hero-card">
+                            <h1>Dashboard</h1>
+                            <p>Real-time factory tracking & insights</p>
+                            <div className="tabs hero-tabs">
+                                <button className={`tab ${selectedView === "overview" ? "tab-active" : ""}`} onClick={() => setSelectedView("overview")}>
+                                    Overview
+                                </button>
+                                <button className={`tab ${selectedView === "doors" ? "tab-active" : ""}`} onClick={() => setSelectedView("doors")}>
+                                    Doors
+                                </button>
+                                <button className={`tab ${selectedView === "machines" ? "tab-active" : ""}`} onClick={() => setSelectedView("machines")}>
+                                    Devices
+                                </button>
+                                <button className={`tab ${selectedView === "employees" ? "tab-active" : ""}`} onClick={() => setSelectedView("employees")}>
+                                    Employees
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div className="dashboard-layout">
-                <aside className="dashboard-sidebar">
-                    <div className="stats-area" style={{ animation: 'fadeIn 0.6s ease-out' }}>
-                        <div className="stats-grid">
-                            {realtimeStats.map((stat, index) => (
-                                <div className="stat-card card" key={index}>
-                                    <StatCard title={stat.title} value={stat.value.toString()} icon={stat.icon} />
-                                </div>
-                            ))}
+                <div className="dashboard-layout">
+                    <aside className="dashboard-sidebar">
+                        <div className="stats-area" style={{ animation: "fadeIn 0.6s ease-out" }}>
+                            <div className="stats-grid">
+                                {realtimeStats.map((stat, index) => (
+                                    <div className="stat-card card" key={index}>
+                                        <StatCard title={stat.title} value={stat.value.toString()} icon={stat.icon} />
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                    </div>
-                </aside>
+                    </aside>
 
-                <main className="dashboard-main">
-                    <div style={{ animation: 'fadeIn 0.8s ease-out' }}>
-                        {selectedView === "overview" && (
-                            <div style={{ 
-                                display: 'grid', 
-                                gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 400px), 1fr))', 
-                                gap: '2rem',
-                                marginTop: '1rem'
-                            }}>
-                                <div className="chart-card card">
-                                    <h2>Door Access (24h)</h2>
-                                    <DoorAccessChart data={doorAccessData} loading={eventsLoading} />
+                    <main className="dashboard-main">
+                        <div style={{ animation: "fadeIn 0.8s ease-out" }}>
+                            {selectedView === "overview" && (
+                                <div
+                                    style={{
+                                        display: "grid",
+                                        gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 400px), 1fr))",
+                                        gap: "2rem",
+                                        marginTop: "1rem",
+                                    }}
+                                >
+                                    <div className="chart-card card">
+                                        <h2>Door Access (24h)</h2>
+                                        <DoorAccessChart data={doorAccessData} loading={eventsLoading} />
+                                    </div>
+                                    <div className="chart-card card">
+                                        <h2>Machine Usage (Hours)</h2>
+                                        <MachineUsageChart data={machineUsageData} loading={eventsLoading} />
+                                    </div>
                                 </div>
-                                <div className="chart-card card">
-                                    <h2>Machine Usage (Hours)</h2>
-                                    <MachineUsageChart data={machineUsageData} loading={eventsLoading} />
+                            )}
+
+                            {selectedView === "doors" && (
+                                <div className="table-card card" style={{ marginTop: "1rem" }}>
+                                    <h2>Doors</h2>
+                                    <DoorGrid doors={doors} loading={doorsLoading} onEntryClick={() => {}} onExitClick={() => {}} />
                                 </div>
-                            </div>
-                        )}
+                            )}
 
-                        {selectedView === "doors" && (
-                            <div className="table-card card" style={{ marginTop: '1rem' }}>
-                                <h2>Doors</h2>
-                                <DoorGrid doors={doors} loading={doorsLoading} onEntryClick={() => {}} onExitClick={() => {}} />
-                            </div>
-                        )}
-                        
-                        {selectedView === "machines" && (
-                            <div className="table-card card" style={{ marginTop: '1rem' }}>
-                                <h2>Devices</h2>
-                                <MachineGrid machines={machines} loading={machinesLoading} />
-                            </div>
-                        )}
+                            {selectedView === "machines" && (
+                                <div className="table-card card" style={{ marginTop: "1rem" }}>
+                                    <h2>Devices</h2>
+                                    <MachineGrid machines={machines} loading={machinesLoading} />
+                                </div>
+                            )}
 
-                        {selectedView === "employees" && (
-                            <div className="table-card card" style={{ marginTop: '1rem' }}>
-                                <h2>Employees</h2>
-                                <EmployeeList employees={workerCards} clockEvents={parsedEvents.clockEvents} onSelectEmployee={setSelectedEmployee} selectedEmployee={selectedEmployee} loading={loadingCards} />
-                            </div>
-                        )}
-                    </div>
-                </main>
+                            {selectedView === "employees" && (
+                                <div className="table-card card" style={{ marginTop: "1rem" }}>
+                                    <h2>Employees</h2>
+                                    <EmployeeList
+                                        employees={workerCards}
+                                        clockEvents={parsedEvents.clockEvents}
+                                        onSelectEmployee={setSelectedEmployee}
+                                        selectedEmployee={selectedEmployee}
+                                        loading={loadingCards}
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    </main>
+                </div>
             </div>
-            </div>
-
-            
         </div>
     );
 }
