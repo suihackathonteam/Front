@@ -55,7 +55,8 @@ function Services() {
     ];
 
     return (
-        <div className="fade-in home-page" style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        <div className="fade-in home-page">
+            <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem' }}>
             <div className="animated-background" aria-hidden="true">
                 <div className="floating-shape shape-1"></div>
                 <div className="floating-shape shape-2"></div>
@@ -70,7 +71,7 @@ function Services() {
                 <div className="sparkle" style={{ top: '20%', left: '70%', animationDuration: '9s', animationDelay: '0.1s' }}></div>
             </div>
             <div className="page-header">
-                <div className="hero-card-wrapper fade-in-up">
+                <div className="hero-card-wrapper hero-entrance">
                     <div className="hero-card">
                         <h1>Our Services</h1>
                         <p>Comprehensive solutions we offer with TeamPro</p>
@@ -89,9 +90,8 @@ function Services() {
                 {services.map((service, index) => (
                     <div
                         key={index}
-                        className="card"
+                        className="card service-card"
                         style={{ 
-                            padding: "2rem", 
                             transition: "transform 0.3s ease, box-shadow 0.3s ease", 
                             cursor: "pointer",
                             display: 'flex',
@@ -127,6 +127,7 @@ function Services() {
                         </ul>
                     </div>
                 ))}
+            </div>
             </div>
         </div>
     );

@@ -2,15 +2,15 @@
 .admin-container {
     min-height: 100vh;
     background: var(--bg);
-    padding: 2rem 1.5rem;
+    padding: 0;
 }
 
 .admin-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 2rem;
-    padding-bottom: 1rem;
+    margin-bottom: 2.5rem;
+    padding-bottom: 1.5rem;
     border-bottom: 2px solid rgba(14,21,32,0.04);
 }
 
@@ -92,7 +92,7 @@
     padding: 2rem;
     border-radius: 12px;
     border: 1px solid rgba(14,21,32,0.04);
-    max-width: 800px;
+    max-width: 900px;
     margin: 0 auto 2rem;
 }
 
@@ -350,7 +350,7 @@
 /* Responsive */
 @media (max-width: 768px) {
     .admin-container {
-        padding: 1rem;
+        padding: 0;
     }
 
     .admin-header {

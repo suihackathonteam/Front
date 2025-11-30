@@ -84,6 +84,7 @@ function AdminPanel() {
 
     return (
         <div className="admin-panel fade-in">
+            <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem' }}>
             <div className="admin-header">
                 <h1>Admin Panel</h1>
                 <div className="tabs">
@@ -210,6 +211,7 @@ function AdminPanel() {
                         />
                     </div>
                 )}
+            </div>
             </div>
         </div>
     );

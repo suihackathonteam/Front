@@ -132,7 +132,7 @@ function Dashboard() {
     }
 
     return (
-        <div className="dashboard-page fade-in home-page">
+        <div className="dashboard-page fade-in">
             {/* Animated Background */}
             <div className="animated-background" aria-hidden="true">
                 <div className="floating-shape shape-1"></div>
@@ -145,8 +145,9 @@ function Dashboard() {
                 <div className="gradient-orb orb-3"></div>
             </div>
 
+            <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem' }}>
             <div className="dashboard-hero">
-                <div className="hero-card-wrapper fade-in-up">
+                <div className="hero-card-wrapper hero-entrance">
                     <div className="hero-card dashboard-hero-card">
                         <h1>Dashboard</h1>
                         <p>Real-time factory tracking & insights</p>
@@ -215,6 +216,7 @@ function Dashboard() {
                         )}
                     </div>
                 </main>
+            </div>
             </div>
 
             

@@ -4,7 +4,8 @@ import "../styles/Home.css";
 function About() {
     useScrollAnimation();
     return (
-        <div className="about-page fade-in home-page" style={{ maxWidth: '1200px', margin: '0 auto' }}>
+        <div className="about-page fade-in home-page">
+            <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem' }}>
             {/* same animated background as Home for visual parity */}
             <div className="animated-background" aria-hidden="true">
                 <div className="floating-shape shape-1"></div>
@@ -20,7 +21,7 @@ function About() {
                 <div className="sparkle" style={{ top: '22%', left: '68%', animationDuration: '9s', animationDelay: '0.1s' }}></div>
             </div>
             <div className="page-header">
-                <div className="hero-card-wrapper fade-in-up">
+                <div className="hero-card-wrapper hero-entrance">
                     <div className="hero-card">
                         <h1>About Us</h1>
                         <p>TeamPro Personnel Tracking System</p>
@@ -89,6 +90,7 @@ function About() {
                         <p>User Friendly</p>
                     </div>
                 </div>
+            </div>
             </div>
         </div>
     );

@@ -75,7 +75,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 max(2rem, 5vw);
+    padding: 0 2rem;
     height: 64px;
     background-color: rgba(255, 255, 255, 0.8);
     backdrop-filter: blur(20px);
@@ -184,7 +184,7 @@ body {
 
 main {
     flex-grow: 1;
-    padding: 3rem max(2rem, 5vw);
+    padding: 0;
     animation: fadeIn 0.5s ease-out;
     background-color: var(--background-color);
     min-height: calc(100vh - 200px);
@@ -271,8 +271,9 @@ main {
 
 /* Home Page */
 .home-page {
-    max-width: 1400px;
-    margin: 0 auto;
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
 }
 
 .home-hero {
@@ -342,8 +343,9 @@ main {
 .dashboard-page, 
 .admin-panel,
 .about-page {
-    max-width: 1400px;
-    margin: 0 auto;
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
 }
 
 .dashboard-header, 
@@ -420,13 +422,13 @@ main {
 }
 
 .stat-card {
-    padding: 1.75rem;
+    padding: 1.5rem;
 }
 
 .chart-card, 
 .table-card, 
 .form-card {
-    padding: 2rem;
+    padding: 1.5rem;
     margin-bottom: 2rem;
 }
 
@@ -537,7 +539,7 @@ button[type="submit"]:disabled {
 }
 
 .info-card {
-    padding: 2rem;
+    padding: 1.5rem;
 }
 
 .info-card h3 {
@@ -621,7 +623,7 @@ button[type="submit"]:disabled {
     .chart-card,
     .table-card,
     .form-card {
-        padding: 1.75rem;
+        padding: 1.5rem;
     }
 }
 
@@ -695,7 +697,7 @@ button[type="submit"]:disabled {
     }
     
     main {
-        padding: 2rem 1.5rem;
+        padding: 0;
     }
     
     .home-hero {
@@ -759,7 +761,7 @@ button[type="submit"]:disabled {
     }
     
     main {
-        padding: 1.5rem 1rem;
+        padding: 0;
     }
     
     .home-hero {

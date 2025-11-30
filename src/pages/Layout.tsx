@@ -26,7 +26,8 @@ function Layout() {
         <div className="app-root modern-layout">
             <header className="app-topbar">
                 <div className="logo" onClick={() => navigate("/")}>
-                    <h2>TeamPro</h2>
+                    {!currentAccount && <h2>Team</h2>}
+                    {currentAccount && <h2>TeamPro</h2>}
                 </div>
 
                 <nav className={`dashboard-nav ${menuOpen ? "open" : ""}`}>

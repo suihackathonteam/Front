@@ -286,6 +286,7 @@ function WorkerPanel() {
 
     return (
         <div className="worker-container">
+            <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem' }}>
             <div className="worker-header">
                 <div className="worker-title">
                     <h1>👤 Worker Panel</h1>
@@ -419,6 +420,7 @@ function WorkerPanel() {
                 )}
 
                 {activeTab === "awards" && <AwardHistory totalAwardPoints={totalAwardPoints} awardHistory={awardHistory as any} recentAwards={awardEvents} />}
+            </div>
             </div>
         </div>
     );

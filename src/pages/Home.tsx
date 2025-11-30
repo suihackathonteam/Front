@@ -33,10 +33,6 @@ function Home() {
                     <div className="hero-card">
                     <h1>Transparent Factory Tracking, powered by Sui</h1>
                     <p>Secure, real-time entry, machines and shift tracking — built to scale for teams and factories.</p>
-                    <div className="cta-buttons">
-                        <button className="btn btn-primary">Get Started</button>
-                        <button className="btn btn-secondary">Learn More</button>
-                    </div>
                     </div>
                 </div>
             </section>
