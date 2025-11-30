@@ -1,7 +1,18 @@
 import { useState, useEffect } from "react";
 import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useAdminCap, useIdentityTransaction, useDoors, useMachines } from "../hooks/useIdentity";
-import { buildIssueWorkerCardTx, buildRegisterDoorTx, buildRegisterMachineTx, buildIssueAwardTx } from "../utils/transactions";
+import { 
+    buildIssueWorkerCardTx, 
+    buildRegisterDoorTx, 
+    buildRegisterMachineTx, 
+    buildIssueAwardTx,
+    buildUpdateDoorTx,
+    buildUpdateMachineTx,
+    buildActivateDoorTx,
+    buildDeactivateDoorTx,
+    buildActivateMachineTx,
+    buildDeactivateMachineTx
+} from "../utils/transactions";
 import SuiConnectButton from "../components/SuiConnectButton";
 import WorkerCardForm from "../components/admin/WorkerCardForm";
 import DoorRegistrationForm from "../components/admin/DoorRegistrationForm";
@@ -10,12 +21,16 @@ import AwardIssuanceForm from "../components/admin/AwardIssuanceForm";
 import DoorList from "../components/admin/DoorList";
 import MachineList from "../components/admin/MachineList";
 import LoadingSpinner from "../components/shared/LoadingSpinner";
+import EditModal from "../components/admin/EditModal";
+import useScrollAnimation from "../hooks/useScrollAnimation";
+import "../styles/AdminPanel.css";
 
 function isValidSuiAddress(address: string): boolean {
     return address.startsWith("0x") && address.length >= 10;
 }
 
 function AdminPanel() {
+    useScrollAnimation();
     const account = useCurrentAccount();
     const { isAdmin, adminCapId, loading: adminLoading } = useAdminCap();
     const { executeTransaction, isLoading: txLoading, error: txError } = useIdentityTransaction();
@@ -32,6 +47,21 @@ function AdminPanel() {
     const [machineForm, setMachineForm] = useState({ name: "", machine_type: "", location: "" });
     const [awardForm, setAwardForm] = useState({ worker_card_id: "", award_type: "", points: "", description: "" });
 
+    // Edit modal states
+    const [editDoorModal, setEditDoorModal] = useState<{ open: boolean; doorId: number | null; name: string; location: string }>({
+        open: false,
+        doorId: null,
+        name: "",
+        location: "",
+    });
+    const [editMachineModal, setEditMachineModal] = useState<{ open: boolean; machineId: number | null; name: string; machine_type: string; location: string }>({
+        open: false,
+        machineId: null,
+        name: "",
+        machine_type: "",
+        location: "",
+    });
+
     // Track initial load
     useEffect(() => {
         if (!adminLoading) {
@@ -46,6 +76,73 @@ function AdminPanel() {
                 setTimeout(() => setShowSuccess(false), 3000);
                 if (onSuccess) onSuccess();
             },
+        });
+    };
+
+    // Door handlers
+    const handleEditDoor = (doorId: number, name: string, location: string) => {
+        setEditDoorModal({ open: true, doorId, name, location });
+    };
+
+    const handleUpdateDoor = (values: { name: string; location?: string }) => {
+        if (!adminCapId || editDoorModal.doorId === null) return;
+        const tx = buildUpdateDoorTx(adminCapId, editDoorModal.doorId, {
+            name: values.name,
+            location: values.location || "",
+        });
+        handleTransaction(tx, () => {
+            setEditDoorModal({ open: false, doorId: null, name: "", location: "" });
+            setTimeout(() => refetchDoors(), 1000);
+        });
+    };
+
+    const handleActivateDoor = (doorId: number) => {
+        if (!adminCapId) return;
+        const tx = buildActivateDoorTx(adminCapId, doorId);
+        handleTransaction(tx, () => {
+            setTimeout(() => refetchDoors(), 1000);
+        });
+    };
+
+    const handleDeactivateDoor = (doorId: number) => {
+        if (!adminCapId) return;
+        const tx = buildDeactivateDoorTx(adminCapId, doorId);
+        handleTransaction(tx, () => {
+            setTimeout(() => refetchDoors(), 1000);
+        });
+    };
+
+    // Machine handlers
+    const handleEditMachine = (machineId: number, name: string, machine_type: string, location: string) => {
+        setEditMachineModal({ open: true, machineId, name, machine_type, location });
+    };
+
+    const handleUpdateMachine = (values: { name: string; location?: string; category?: string }) => {
+        if (!adminCapId || editMachineModal.machineId === null) return;
+        const tx = buildUpdateMachineTx(adminCapId, editMachineModal.machineId, {
+            name: values.name,
+            machine_type: editMachineModal.machine_type,
+            location: values.location || "",
+        });
+        handleTransaction(tx, () => {
+            setEditMachineModal({ open: false, machineId: null, name: "", machine_type: "", location: "" });
+            setTimeout(() => refetchMachines(), 1000);
+        });
+    };
+
+    const handleActivateMachine = (machineId: number) => {
+        if (!adminCapId) return;
+        const tx = buildActivateMachineTx(adminCapId, machineId);
+        handleTransaction(tx, () => {
+            setTimeout(() => refetchMachines(), 1000);
+        });
+    };
+
+    const handleDeactivateMachine = (machineId: number) => {
+        if (!adminCapId) return;
+        const tx = buildDeactivateMachineTx(adminCapId, machineId);
+        handleTransaction(tx, () => {
+            setTimeout(() => refetchMachines(), 1000);
         });
     };
 
@@ -78,6 +175,28 @@ function AdminPanel() {
 
     return (
         <div className="admin-panel fade-in" style={{ position: "relative" }}>
+            {/* Animated Background */}
+            <div className="animated-background" aria-hidden="true">
+                <div className="floating-shape shape-1"></div>
+                <div className="floating-shape shape-2"></div>
+                <div className="floating-shape shape-3"></div>
+                <div className="floating-shape shape-4"></div>
+                <div className="floating-shape shape-5"></div>
+                <div className="gradient-orb orb-1"></div>
+                <div className="gradient-orb orb-2"></div>
+                <div className="gradient-orb orb-3"></div>
+                {/* Decorative sparkles */}
+                <div className="sparkle" style={{ top: "12%", left: "22%", animationDuration: "8s", animationDelay: "0s" }}></div>
+                <div className="sparkle" style={{ top: "38%", left: "8%", animationDuration: "10s", animationDelay: "1s" }}></div>
+                <div className="sparkle" style={{ top: "20%", left: "70%", animationDuration: "9s", animationDelay: "0.1s" }}></div>
+                <div className="sparkle" style={{ top: "64%", left: "45%", animationDuration: "11s", animationDelay: "0.3s" }}></div>
+                <div className="sparkle" style={{ top: "30%", left: "40%", animationDuration: "7s", animationDelay: "0.5s" }}></div>
+                <div className="sparkle" style={{ top: "85%", left: "12%", animationDuration: "9s", animationDelay: "0.7s" }}></div>
+                <div className="sparkle" style={{ top: "8%", left: "82%", animationDuration: "12s", animationDelay: "0.2s" }}></div>
+                <div className="sparkle" style={{ top: "55%", left: "82%", animationDuration: "7s", animationDelay: "1.5s" }}></div>
+                <div className="sparkle" style={{ top: "72%", left: "58%", animationDuration: "9s", animationDelay: "2s" }}></div>
+                <div className="sparkle" style={{ top: "40%", left: "28%", animationDuration: "10s", animationDelay: "1s" }}></div>
+            </div>
             {/* Background loading indicator */}
             {adminLoading && !isInitialLoad && (
                 <div
@@ -104,19 +223,19 @@ function AdminPanel() {
             )}
             <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "2rem" }}>
                 <div className="admin-header">
-                    <h1>Admin Panel</h1>
+                    <h1>🔐 Admin Panel</h1>
                     <div className="tabs">
                         <button className={`tab ${activeTab === "workers" ? "tab-active" : ""}`} onClick={() => setActiveTab("workers")}>
-                            Worker Cards
+                            👷 Worker Cards
                         </button>
                         <button className={`tab ${activeTab === "doors" ? "tab-active" : ""}`} onClick={() => setActiveTab("doors")}>
-                            Doors
+                            🚪 Doors
                         </button>
                         <button className={`tab ${activeTab === "machines" ? "tab-active" : ""}`} onClick={() => setActiveTab("machines")}>
-                            Devices
+                            ⚙️ Devices
                         </button>
                         <button className={`tab ${activeTab === "awards" ? "tab-active" : ""}`} onClick={() => setActiveTab("awards")}>
-                            Give Award
+                            🏆 Give Award
                         </button>
                     </div>
                 </div>
@@ -141,7 +260,7 @@ function AdminPanel() {
                 <div style={{ marginTop: "1rem", animation: "fadeIn 0.6s ease-out" }}>
                     {activeTab === "workers" && (
                         <div className="form-card card">
-                            <h2>Issue Worker Card</h2>
+                            <h2>👷 Issue Worker Card</h2>
                             <WorkerCardForm
                                 values={workerForm}
                                 loading={txLoading}
@@ -164,7 +283,7 @@ function AdminPanel() {
                     {activeTab === "doors" && (
                         <>
                             <div className="form-card card" style={{ marginBottom: "2rem" }}>
-                                <h2>Register a New Door</h2>
+                                <h2>🚪 Register a New Door</h2>
                                 <DoorRegistrationForm
                                     values={doorForm}
                                     loading={txLoading}
@@ -181,8 +300,14 @@ function AdminPanel() {
                                 />
                             </div>
                             <div className="table-card card">
-                                <h2>Existing Doors</h2>
-                                <DoorList doors={doors} loading={doorsLoading} onEdit={() => {}} onActivate={() => {}} onDeactivate={() => {}} />
+                                <h2>🚪 Existing Doors</h2>
+                                <DoorList 
+                                    doors={doors} 
+                                    loading={doorsLoading} 
+                                    onEdit={handleEditDoor} 
+                                    onActivate={handleActivateDoor} 
+                                    onDeactivate={handleDeactivateDoor} 
+                                />
                             </div>
                         </>
                     )}
@@ -190,7 +315,7 @@ function AdminPanel() {
                     {activeTab === "machines" && (
                         <>
                             <div className="form-card card" style={{ marginBottom: "2rem" }}>
-                                <h2>Register a New Device</h2>
+                                <h2>⚙️ Register a New Device</h2>
                                 <MachineRegistrationForm
                                     values={machineForm}
                                     loading={txLoading}
@@ -207,15 +332,21 @@ function AdminPanel() {
                                 />
                             </div>
                             <div className="table-card card">
-                                <h2>Existing Devices</h2>
-                                <MachineList machines={machines} loading={machinesLoading} onEdit={() => {}} onActivate={() => {}} onDeactivate={() => {}} />
+                                <h2>⚙️ Existing Devices</h2>
+                                <MachineList 
+                                    machines={machines} 
+                                    loading={machinesLoading} 
+                                    onEdit={handleEditMachine} 
+                                    onActivate={handleActivateMachine} 
+                                    onDeactivate={handleDeactivateMachine} 
+                                />
                             </div>
                         </>
                     )}
 
                     {activeTab === "awards" && (
                         <div className="form-card card">
-                            <h2>Issue an Award</h2>
+                            <h2>🏆 Issue an Award</h2>
                             <AwardIssuanceForm
                                 values={awardForm}
                                 loading={txLoading}
@@ -237,6 +368,22 @@ function AdminPanel() {
                     )}
                 </div>
             </div>
+
+            {/* Edit Modals */}
+            <EditModal
+                open={editDoorModal.open}
+                title="Edit Door"
+                initial={{ name: editDoorModal.name, location: editDoorModal.location }}
+                onClose={() => setEditDoorModal({ open: false, doorId: null, name: "", location: "" })}
+                onSubmit={handleUpdateDoor}
+            />
+            <EditModal
+                open={editMachineModal.open}
+                title="Edit Machine"
+                initial={{ name: editMachineModal.name, location: editMachineModal.location, category: editMachineModal.machine_type }}
+                onClose={() => setEditMachineModal({ open: false, machineId: null, name: "", machine_type: "", location: "" })}
+                onSubmit={handleUpdateMachine}
+            />
         </div>
     );
 }

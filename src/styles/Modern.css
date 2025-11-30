@@ -1,5 +1,5 @@
 /* src/styles/Modern.css - Responsive & Modern Apple/Samsung Style */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 
 :root {
     --background-color: #fafafa;
@@ -11,7 +11,7 @@
     --primary-hover: #0077ed;
     --border-color: #d2d2d7;
     --hover-color: #f5f5f7;
-    --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     --shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
     --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
@@ -38,22 +38,40 @@ body {
 
 /* Animations */
 @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
 }
 
 @keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(30px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 @keyframes slideDown {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .fade-in {
@@ -122,7 +140,7 @@ body {
 }
 
 .dashboard-nav a::after {
-    content: '';
+    content: "";
     position: absolute;
     bottom: 0;
     left: 0;
@@ -164,13 +182,14 @@ body {
 }
 
 .mobile-menu-toggle {
-    display: none;
+    display: flex;
     background: none;
     border: none;
     cursor: pointer;
     padding: 0.5rem;
     flex-direction: column;
     gap: 4px;
+    margin-left: 1rem;
 }
 
 .mobile-menu-toggle span {
@@ -340,7 +359,7 @@ main {
 }
 
 /* Dashboard & Admin */
-.dashboard-page, 
+.dashboard-page,
 .admin-panel,
 .about-page {
     max-width: 100%;
@@ -348,12 +367,12 @@ main {
     padding: 0;
 }
 
-.dashboard-header, 
+.dashboard-header,
 .admin-header {
     margin-bottom: 2.5rem;
 }
 
-.dashboard-header h1, 
+.dashboard-header h1,
 .admin-header h1 {
     font-size: clamp(1.75rem, 3vw, 2.5rem);
     font-weight: 700;
@@ -431,8 +450,8 @@ main {
     padding: 1.5rem;
 }
 
-.chart-card, 
-.table-card, 
+.chart-card,
+.table-card,
 .form-card {
     padding: 1.5rem;
     margin-bottom: 2rem;
@@ -605,7 +624,7 @@ button[type="submit"]:disabled {
 }
 
 .success-banner {
-    background-color: #34C759;
+    background-color: #34c759;
     color: white;
     padding: 1rem;
     border-radius: var(--radius-sm);
@@ -621,11 +640,11 @@ button[type="submit"]:disabled {
     .info-grid {
         grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     }
-    
+
     .stats-grid {
         grid-template-columns: repeat(2, 1fr);
     }
-    
+
     .chart-card,
     .table-card,
     .form-card {
@@ -638,11 +657,11 @@ button[type="submit"]:disabled {
         padding: 0 1.5rem;
         height: 56px;
     }
-    
+
     .logo h2 {
         font-size: 1.25rem;
     }
-    
+
     .dashboard-nav {
         position: fixed;
         top: 56px;
@@ -664,13 +683,13 @@ button[type="submit"]:disabled {
         max-height: calc(100vh - 56px);
         overflow-y: auto;
     }
-    
+
     .dashboard-nav.open {
         transform: translateY(0);
         opacity: 1;
         visibility: visible;
     }
-    
+
     .dashboard-nav a {
         padding: 1.25rem 1.5rem;
         border-bottom: 1px solid var(--border-color);
@@ -678,77 +697,77 @@ button[type="submit"]:disabled {
         width: 100%;
         text-align: left;
     }
-    
+
     .dashboard-nav a::after {
         display: none;
     }
-    
+
     .dashboard-nav a:last-child {
         border-bottom: none;
     }
-    
+
     .mobile-menu-toggle {
         display: flex;
         order: 3;
     }
-    
+
     .user-section {
         order: 2;
         gap: 0.75rem;
     }
-    
+
     .logout-btn {
         padding: 0.5rem 1rem;
         font-size: 0.85rem;
     }
-    
+
     main {
         padding: 0;
     }
-    
+
     .home-hero {
         padding: 3rem 1rem;
     }
-    
+
     .features-section {
         padding: 3rem 1rem;
     }
-    
+
     .features-grid {
         grid-template-columns: 1fr;
         gap: 1.5rem;
     }
-    
+
     .stats-grid {
         grid-template-columns: 1fr;
         gap: 1rem;
     }
-    
+
     .info-grid {
         grid-template-columns: 1fr;
         gap: 1.5rem;
     }
-    
+
     .chart-card,
     .table-card,
     .form-card {
         padding: 1.5rem;
     }
-    
+
     .cta-buttons {
         flex-direction: column;
         width: 100%;
     }
-    
+
     .btn {
         width: 100%;
     }
-    
+
     .tabs {
         gap: 0;
         padding-bottom: 0;
     }
-    
+
     .tab {
         padding: 0.875rem 1rem;
         font-size: 0.9rem;
@@ -761,57 +780,57 @@ button[type="submit"]:disabled {
     .app-topbar {
         padding: 0 1rem;
     }
-    
+
     .logo h2 {
         font-size: 1.1rem;
     }
-    
+
     main {
         padding: 0;
     }
-    
+
     .home-hero {
         padding: 2rem 1rem;
     }
-    
+
     .home-hero h1 {
         font-size: 2rem;
     }
-    
+
     .features-section {
         padding: 2rem 1rem;
     }
-    
+
     .feature-card,
     .info-card {
         padding: 1.5rem;
     }
-    
+
     .stat-card {
         padding: 1.25rem;
     }
-    
+
     .chart-card,
     .table-card,
     .form-card {
         padding: 1.25rem;
     }
-    
+
     .btn {
         padding: 0.875rem 1.5rem;
         font-size: 0.95rem;
     }
-    
+
     .dashboard-header h1,
     .admin-header h1 {
         font-size: 1.5rem;
     }
-    
+
     .tabs {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
     }
-    
+
     .tab {
         flex: 0 0 auto;
         min-width: 100px;

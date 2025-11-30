@@ -4,7 +4,7 @@ import "../styles/Home.css";
 import "../styles/DashboardEnhanced.css";
 import { useCurrentAccount } from "@mysten/dapp-kit";
 import SuiConnectButton from "../components/SuiConnectButton";
-import { useIdentityEvents, useDoors, useMachines, useAllWorkerCards, useDashboardStats } from "../hooks/useIdentity";
+import { useIdentityEvents, useDoors, useMachines, useAllWorkerCards, useDashboardStats, useAdminCap } from "../hooks/useIdentity";
 import type { EventData } from "../types/sui";
 import StatCard from "../components/dashboard/StatCard";
 import DoorAccessChart from "../components/dashboard/DoorAccessChart";
@@ -24,6 +24,7 @@ function Dashboard() {
     const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null);
     const [isInitialLoad, setIsInitialLoad] = useState(true);
     const currentAccount = useCurrentAccount();
+    const { isAdmin, loading: adminLoading } = useAdminCap();
 
     const { events: allEvents, loading: eventsLoading } = useIdentityEvents("*");
 
@@ -92,13 +93,28 @@ function Dashboard() {
         }));
     }, [parsedEvents.machineEvents]);
 
+    // Filter only active doors and machines for display
+    const activeDoors = useMemo(() => {
+        const filtered = doors.filter((door) => door.is_active);
+        console.log("All doors:", doors);
+        console.log("Active doors:", filtered);
+        return filtered;
+    }, [doors]);
+    
+    const activeMachines = useMemo(() => {
+        const filtered = machines.filter((machine) => machine.is_active);
+        console.log("All machines:", machines);
+        console.log("Active machines:", filtered);
+        return filtered;
+    }, [machines]);
+
     const realtimeStats = useMemo(() => {
         // Active workers count from worker cards (only check is_active, not is_in_shift)
         const activeWorkers = workerCards.filter((card) => card.is_active).length;
 
         // Use contract stats for machines, production, and entries
         // Fall back to local calculation if contract stats are not available
-        const activeMachines = contractStats.activeMachinesCount > 0 ? contractStats.activeMachinesCount : machines.filter((m) => m.is_active).length;
+        const activeMachinesCount = contractStats.activeMachinesCount > 0 ? contractStats.activeMachinesCount : machines.filter((m) => m.is_active).length;
 
         const totalProduction =
             contractStats.totalProduction > 0 ? contractStats.totalProduction : workerCards.reduce((acc, card) => acc + (card.total_production || 0), 0);
@@ -111,7 +127,7 @@ function Dashboard() {
 
         return [
             { title: "Active Workers", value: activeWorkers, icon: "👷" },
-            { title: "Active Machines", value: activeMachines, icon: "⚙️" },
+            { title: "Active Machines", value: activeMachinesCount, icon: "⚙️" },
             { title: "Total Production", value: totalProduction, icon: "📦" },
             { title: "Today's Entries", value: todaysEntries, icon: "🚪" },
         ];
@@ -119,10 +135,10 @@ function Dashboard() {
 
     // Track initial load
     useEffect(() => {
-        if (!eventsLoading && !loadingCards) {
+        if (!eventsLoading && !loadingCards && !adminLoading) {
             setIsInitialLoad(false);
         }
-    }, [eventsLoading, loadingCards]);
+    }, [eventsLoading, loadingCards, adminLoading]);
 
     if (!currentAccount) {
         return (
@@ -136,8 +152,19 @@ function Dashboard() {
         );
     }
 
-    if ((eventsLoading || loadingCards) && isInitialLoad) {
+    if ((eventsLoading || loadingCards || adminLoading) && isInitialLoad) {
         return <LoadingSpinner size="large" message="Loading dashboard data..." />;
+    }
+
+    if (!isAdmin) {
+        return (
+            <div className="text-center" style={{ paddingTop: "5rem" }}>
+                <div className="card" style={{ maxWidth: "500px", margin: "0 auto", padding: "3rem 2rem" }}>
+                    <h2 style={{ marginBottom: "1rem", color: "#ff3b30" }}>🔒 Unauthorized Access</h2>
+                    <p style={{ color: "var(--text-color-secondary)" }}>You must have AdminCap permission to access the dashboard.</p>
+                </div>
+            </div>
+        );
     }
 
     return (
@@ -240,14 +267,14 @@ function Dashboard() {
                             {selectedView === "doors" && (
                                 <div className="table-card card" style={{ marginTop: "1rem" }}>
                                     <h2>Doors</h2>
-                                    <DoorGrid doors={doors} loading={doorsLoading} onEntryClick={() => {}} onExitClick={() => {}} />
+                                    <DoorGrid doors={activeDoors} loading={doorsLoading} onEntryClick={() => {}} onExitClick={() => {}} />
                                 </div>
                             )}
 
                             {selectedView === "machines" && (
                                 <div className="table-card card" style={{ marginTop: "1rem" }}>
                                     <h2>Devices</h2>
-                                    <MachineGrid machines={machines} loading={machinesLoading} />
+                                    <MachineGrid machines={activeMachines} loading={machinesLoading} />
                                 </div>
                             )}
 

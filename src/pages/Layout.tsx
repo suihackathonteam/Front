@@ -36,7 +36,7 @@ function Layout() {
                     <a onClick={() => handleNavigate("/services")}>Services</a>
                     {currentAccount && (
                         <>
-                            <a onClick={() => handleNavigate("/dashboard")}>Dashboard</a>
+                            {isAdmin && <a onClick={() => handleNavigate("/dashboard")}>Dashboard</a>}
                             <a onClick={() => handleNavigate("/worker")}>Worker</a>
                         </>
                     )}
@@ -55,12 +55,8 @@ function Layout() {
                         </button>
                     )}
                 </div>
-                
-                <button 
-                    className="mobile-menu-toggle" 
-                    onClick={() => setMenuOpen(!menuOpen)}
-                    aria-label="Toggle menu"
-                >
+
+                <button className="mobile-menu-toggle" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle menu">
                     <span></span>
                     <span></span>
                     <span></span>
