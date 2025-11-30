@@ -146,7 +146,13 @@ export function buildRecordDoorAccessTx(
 
     tx.moveCall({
         target: `${getModuleId()}::record_door_access`,
-        arguments: [tx.object(workerCardId), tx.object(CONTRACT_CONFIG.SYSTEM_REGISTRY_ID), tx.pure.u64(doorId), tx.pure.u8(accessType)],
+        arguments: [
+            tx.object(workerCardId),
+            tx.object(CONTRACT_CONFIG.SYSTEM_REGISTRY_ID),
+            tx.pure.u64(doorId),
+            tx.pure.u8(accessType),
+            tx.object("0x6"), // Clock object
+        ],
     });
 
     return tx;
@@ -167,6 +173,7 @@ export function buildRecordMachineUsageTx(workerCardId: string, form: RecordMach
             tx.pure.u64(form.usage_duration_ms),
             tx.pure.u64(form.production_count),
             tx.pure.u64(form.efficiency_percentage),
+            tx.object("0x6"), // Clock object
         ],
     });
 
@@ -185,7 +192,12 @@ export function buildClockInOutTx(
 
     tx.moveCall({
         target: `${getModuleId()}::clock_in_out`,
-        arguments: [tx.object(workerCardId), tx.object(registryId), tx.pure.u8(actionType)],
+        arguments: [
+            tx.object(workerCardId),
+            tx.object(registryId),
+            tx.pure.u8(actionType),
+            tx.object("0x6"), // Clock object
+        ],
     });
 
     return tx;

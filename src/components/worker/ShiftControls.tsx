@@ -4,11 +4,8 @@ interface ShiftControlsProps {
     onClockIn: () => Promise<void> | void;
     onClockOut: () => Promise<void> | void;
     productionUnits: number;
-    efficiencyPercentage: number;
     onChangeProductionUnits: (v: number) => void;
-    onChangeEfficiency: (v: number) => void;
     onIncrementProduction: () => void;
-    onQuickAdd?: () => void;
     onDoorEntry?: () => Promise<void> | void;
     onDoorExit?: () => Promise<void> | void;
 }
@@ -19,11 +16,8 @@ function ShiftControls({
     onClockIn,
     onClockOut,
     productionUnits,
-    efficiencyPercentage,
     onChangeProductionUnits,
-    onChangeEfficiency,
     onIncrementProduction,
-    onQuickAdd,
     onDoorEntry,
     onDoorExit,
 }: ShiftControlsProps) {
@@ -33,25 +27,25 @@ function ShiftControls({
                 className={`clock-btn clock-in ${shiftActive ? "disabled-shift" : ""}`}
                 onClick={onClockIn}
                 disabled={txLoading || shiftActive}
-                title={txLoading ? "İşlem devam ediyor..." : shiftActive ? "Zaten aktif bir mesai var" : "Mesaiyi başlat"}
+                title={txLoading ? "Transaction in progress..." : shiftActive ? "Already in an active shift" : "Start shift"}
                 style={{
                     opacity: shiftActive ? 0.5 : 1,
                     cursor: shiftActive || txLoading ? "not-allowed" : "pointer",
                 }}
             >
-                {txLoading && !shiftActive ? "⏳ " : ""}🕐 Mesai Başlat
+                {txLoading && !shiftActive ? "⏳ " : ""}🕐 Clock In
             </button>
             <button
                 className={`clock-btn clock-out ${!shiftActive ? "disabled-shift" : ""}`}
                 onClick={onClockOut}
                 disabled={txLoading || !shiftActive}
-                title={txLoading ? "İşlem devam ediyor..." : !shiftActive ? "Aktif mesai yok" : "Mesaiyi bitir"}
+                title={txLoading ? "Transaction in progress..." : !shiftActive ? "No active shift" : "End shift"}
                 style={{
                     opacity: !shiftActive ? 0.5 : 1,
                     cursor: !shiftActive || txLoading ? "not-allowed" : "pointer",
                 }}
             >
-                {txLoading && shiftActive ? "⏳ " : ""}🕐 Mesai Bitir
+                {txLoading && shiftActive ? "⏳ " : ""}🕐 Clock Out
             </button>
             <div className="production-inline-form">
                 <input
@@ -59,45 +53,28 @@ function ShiftControls({
                     min={1}
                     value={productionUnits}
                     onChange={(e) => onChangeProductionUnits(Number(e.target.value))}
-                    placeholder="Birim"
+                    placeholder="Units"
                     disabled={!shiftActive || txLoading}
-                    title={!shiftActive ? "Önce mesai başlatın" : "Üretim birimi"}
-                />
-                <button
-                    className="quick-add-btn"
-                    onClick={onQuickAdd}
-                    disabled={!shiftActive || txLoading || productionUnits <= 0}
-                    title={!shiftActive ? "Önce mesai başlatın" : "Hızlı +1 birim ekle"}
-                >
-                    +
-                </button>
-                <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    value={efficiencyPercentage}
-                    onChange={(e) => onChangeEfficiency(Number(e.target.value))}
-                    placeholder="Verim%"
-                    disabled={!shiftActive || txLoading}
-                    title={!shiftActive ? "Önce mesai başlatın" : "Verimlilik yüzdesi"}
+                    title={!shiftActive ? "Start shift first" : "Production units"}
+                    style={{ width: "100px" }}
                 />
                 <button
                     className="prod-btn"
                     onClick={onIncrementProduction}
                     disabled={!shiftActive || txLoading || productionUnits <= 0}
-                    title={!shiftActive ? "Önce mesai başlatın" : "Üretimi kaydet"}
+                    title={!shiftActive ? "Start shift first" : "Record production"}
                 >
-                    📦 Kaydet
+                    📦 Record Production
                 </button>
             </div>
             {onDoorEntry && (
-                <button className="door-btn door-entry" onClick={onDoorEntry} disabled={txLoading} title="Kapı girişi">
-                    🚪 Giriş
+                <button className="door-btn door-entry" onClick={onDoorEntry} disabled={txLoading} title="Door entry">
+                    🔓 Entry
                 </button>
             )}
             {onDoorExit && (
-                <button className="door-btn door-exit" onClick={onDoorExit} disabled={txLoading} title="Kapı çıkışı">
-                    🚪 Çıkış
+                <button className="door-btn door-exit" onClick={onDoorExit} disabled={txLoading} title="Door exit">
+                    🔒 Exit
                 </button>
             )}
         </div>

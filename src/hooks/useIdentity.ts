@@ -59,6 +59,7 @@ export function useWorkerCard() {
                         is_active: fields.is_active ?? false,
                         total_work_hours: Number(fields.total_work_hours || 0),
                         total_production: Number(fields.total_production || 0),
+                        current_shift_production: Number(fields.current_shift_production || 0),
                         efficiency_score: Number(fields.efficiency_score || 0),
                         last_checkpoint_hash: fields.last_checkpoint_hash || [],
                         current_shift_start_ms: Number(fields.current_shift_start_ms || 0),
@@ -850,6 +851,7 @@ export function useAllWorkerCards() {
                             is_active: cardFields.is_active ?? false,
                             total_work_hours: Number(cardFields.total_work_hours || 0),
                             total_production: Number(cardFields.total_production || 0),
+                            current_shift_production: Number(cardFields.current_shift_production || 0),
                             efficiency_score: Number(cardFields.efficiency_score || 0),
                             last_checkpoint_hash: cardFields.last_checkpoint_hash || [],
                             current_shift_start_ms: Number(cardFields.current_shift_start_ms || 0),
@@ -921,11 +923,11 @@ export function useDashboardStats() {
             const fields = registry.data.content.fields as any;
 
             // Get counters from registry
-            const doorCounter = Number(fields.door_counter || 0);
-            const machineCounter = Number(fields.machine_counter || 0);
+            // const doorCounter = Number(fields.door_counter || 0);
+            // const machineCounter = Number(fields.machine_counter || 0);
 
             // Count active machines from doors and machines tables
-            const doorsTableId = fields.doors?.fields?.id?.id;
+            // const doorsTableId = fields.doors?.fields?.id?.id;
             const machinesTableId = fields.machines?.fields?.id?.id;
 
             let activeMachines = 0;

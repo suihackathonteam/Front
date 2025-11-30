@@ -7,6 +7,7 @@ export interface WorkerCard {
     is_active: boolean;
     total_work_hours: number;
     total_production: number;
+    current_shift_production: number;
     efficiency_score: number;
     last_checkpoint_hash: number[];
     current_shift_start_ms: number;

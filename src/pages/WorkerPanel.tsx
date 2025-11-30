@@ -45,9 +45,11 @@ function WorkerPanel() {
     const [selectedDoorId, setSelectedDoorId] = useState<number>(() => (doors.length > 0 ? doors[0].door_id : 0));
     const [selectedMachineId, setSelectedMachineId] = useState<number>(() => (machines.length > 0 ? machines[0].machine_id : 0));
     const [machineUsageProductionCount, setMachineUsageProductionCount] = useState<number>(0);
-    const [machineUsageEfficiency, setMachineUsageEfficiency] = useState<number>(90);
     const [machineUsageMinutes, setMachineUsageMinutes] = useState<number>(0);
     const [machineUsageSeconds, setMachineUsageSeconds] = useState<number>(0);
+
+    // Hedef: saatte 10 ürün (dakikada ~0.167 ürün)
+    const TARGET_PRODUCTS_PER_MINUTE = 10 / 60;
 
     const [showSuccess, setShowSuccess] = useState(false);
     const [activeTab, setActiveTab] = useState<"info" | "activity" | "awards">("info");
@@ -56,7 +58,6 @@ function WorkerPanel() {
     const shiftStartMs = workerCard?.current_shift_start_ms || 0;
     const [currentWorkTime, setCurrentWorkTime] = useState(0);
     const [productionUnits, setProductionUnits] = useState(1);
-    const [efficiencyPercentage, setEfficiencyPercentage] = useState(90);
 
     // Track initial load completion
     useEffect(() => {
@@ -195,6 +196,8 @@ function WorkerPanel() {
         executeTransaction(tx, {
             onSuccess: () => {
                 setShowSuccess(true);
+                // Mesai bitince üretim sayacını sıfırla
+                setProductionUnits(1);
                 // Hızlı refresh için birden fazla deneme
                 refetchWorkerCard();
                 setTimeout(() => refetchWorkerCard(), 1000);
@@ -213,7 +216,12 @@ function WorkerPanel() {
             alert("⚠️ Start a shift before recording production.");
             return;
         }
-        const tx = buildIncrementProductionTx(workerCard.id, CONTRACT_CONFIG.SYSTEM_REGISTRY_ID, productionUnits, efficiencyPercentage);
+        // Verimlilik hesaplama: Mevcut mesai süresine göre dakikada kaç ürün üretildiğine bakıyoruz
+        const workTimeMinutes = currentWorkTime / 60000; // ms to minutes
+        const actualProductionRate = workTimeMinutes > 0 ? productionUnits / workTimeMinutes : 0;
+        const calculatedEfficiency = Math.min(100, Math.round((actualProductionRate / TARGET_PRODUCTS_PER_MINUTE) * 100));
+
+        const tx = buildIncrementProductionTx(workerCard.id, CONTRACT_CONFIG.SYSTEM_REGISTRY_ID, productionUnits, calculatedEfficiency);
         executeTransaction(tx, {
             onSuccess: () => {
                 setShowSuccess(true);
@@ -222,22 +230,6 @@ function WorkerPanel() {
                 setProductionUnits(1);
                 setTimeout(() => setShowSuccess(false), 3000);
             },
-        });
-    };
-
-    const handleQuickAddProduction = () => {
-        if (!derivedShiftActive) {
-            alert("⚠️ Start a shift before recording production.");
-            return;
-        }
-        const tx = buildIncrementProductionTx(workerCard!.id, CONTRACT_CONFIG.SYSTEM_REGISTRY_ID, 1, efficiencyPercentage);
-        executeTransaction(tx, {
-            onSuccess: () => {
-                setShowSuccess(true);
-                refetchWorkerCard();
-                setTimeout(() => setShowSuccess(false), 2000);
-            },
-            onError: (err) => alert("⚠️ Failed to increment production: " + err),
         });
     };
 
@@ -282,11 +274,17 @@ function WorkerPanel() {
             alert("⚠️ Duration must be > 0 ms");
             return;
         }
+
+        // Verimlilik hesaplama: Süre içinde üretilen ürün sayısına göre
+        const durationMinutes = durationMs / 60000;
+        const actualProductionRate = durationMinutes > 0 ? machineUsageProductionCount / durationMinutes : 0;
+        const calculatedEfficiency = Math.min(100, Math.round((actualProductionRate / TARGET_PRODUCTS_PER_MINUTE) * 100));
+
         const tx = buildRecordMachineUsageTx(workerCard.id, {
             machine_id: selectedMachineId,
             usage_duration_ms: durationMs,
             production_count: machineUsageProductionCount,
-            efficiency_percentage: machineUsageEfficiency,
+            efficiency_percentage: calculatedEfficiency,
         });
         executeTransaction(tx, {
             onSuccess: () => {
@@ -338,11 +336,8 @@ function WorkerPanel() {
                         onClockIn={handleClockIn}
                         onClockOut={handleClockOut}
                         productionUnits={productionUnits}
-                        efficiencyPercentage={efficiencyPercentage}
                         onChangeProductionUnits={setProductionUnits}
-                        onChangeEfficiency={setEfficiencyPercentage}
                         onIncrementProduction={handleIncrementProduction}
-                        onQuickAdd={handleQuickAddProduction}
                         txLoading={txLoading}
                         shiftActive={derivedShiftActive}
                     />
@@ -357,15 +352,15 @@ function WorkerPanel() {
                             <select value={selectedDoorId} onChange={(e) => setSelectedDoorId(Number(e.target.value))}>
                                 {doors.map((d) => (
                                     <option key={d.door_id} value={d.door_id}>
-                                        #{d.door_id} - {d.name}
+                                        #{d.door_id} - {d.name} - {d.location}
                                     </option>
                                 ))}
                             </select>
                             <button onClick={handleDoorEntry} disabled={txLoading}>
-                                Entry
+                                🔓 Entry
                             </button>
                             <button onClick={handleDoorExit} disabled={txLoading}>
-                                Exit
+                                🔒 Exit
                             </button>
                         </div>
                     )}
@@ -388,7 +383,7 @@ function WorkerPanel() {
                 )}
 
                 <div className="machine-usage-panel">
-                    "<h2>⚙️ Machine Usage</h2>
+                    <h2>⚙️ Machine Usage</h2>
                     {machines.length === 0 ? (
                         <p className="no-data">No machines registered</p>
                     ) : (
@@ -396,46 +391,41 @@ function WorkerPanel() {
                             <select value={selectedMachineId} onChange={(e) => setSelectedMachineId(Number(e.target.value))}>
                                 {machines.map((m) => (
                                     <option key={m.machine_id} value={m.machine_id}>
-                                        #{m.machine_id} - {m.name}
+                                        #{m.machine_id} - {m.name} ({m.machine_type})
                                     </option>
                                 ))}
                             </select>
                             <input
                                 type="number"
                                 min={0}
-                                placeholder="Min"
+                                placeholder="Minutes"
                                 value={machineUsageMinutes}
                                 onChange={(e) => setMachineUsageMinutes(Number(e.target.value))}
+                                style={{ width: "100px" }}
                             />
                             <input
                                 type="number"
                                 min={0}
                                 max={59}
-                                placeholder="Sec"
+                                placeholder="Seconds"
                                 value={machineUsageSeconds}
                                 onChange={(e) => setMachineUsageSeconds(Number(e.target.value))}
+                                style={{ width: "100px" }}
                             />
                             <input
                                 type="number"
                                 min={0}
-                                placeholder="Production units"
+                                placeholder="Units produced"
                                 value={machineUsageProductionCount}
                                 onChange={(e) => setMachineUsageProductionCount(Number(e.target.value))}
-                            />
-                            <input
-                                type="number"
-                                min={0}
-                                max={100}
-                                placeholder="Eff%"
-                                value={machineUsageEfficiency}
-                                onChange={(e) => setMachineUsageEfficiency(Number(e.target.value))}
+                                style={{ width: "140px" }}
                             />
                             <button
                                 onClick={handleRecordMachineUsage}
                                 disabled={txLoading || machineUsageMinutes * 60000 + machineUsageSeconds * 1000 <= 0}
                                 title={machineUsageMinutes * 60000 + machineUsageSeconds * 1000 <= 0 ? "Duration required" : "Record usage"}
                             >
-                                Save
+                                💾 Record Usage
                             </button>
                         </div>
                     )}

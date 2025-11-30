@@ -30,7 +30,7 @@ function Dashboard() {
     const { doors, loading: doorsLoading } = useDoors();
     const { machines, loading: machinesLoading } = useMachines();
     const { workerCards: rawWorkerCards, loading: loadingCards } = useAllWorkerCards();
-    const { stats: contractStats, loading: statsLoading } = useDashboardStats();
+    const { stats: contractStats } = useDashboardStats();
 
     // Enrich worker cards with event counts for EmployeeList component
     const workerCards = useMemo(() => {
