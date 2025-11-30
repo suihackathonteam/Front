@@ -30,20 +30,28 @@ function ShiftControls({
     return (
         <div className="quick-actions shift-controls">
             <button
-                className="clock-btn clock-in"
+                className={`clock-btn clock-in ${shiftActive ? "disabled-shift" : ""}`}
                 onClick={onClockIn}
                 disabled={txLoading || shiftActive}
-                title={shiftActive ? "A shift is already active" : "Start shift"}
+                title={txLoading ? "İşlem devam ediyor..." : shiftActive ? "Zaten aktif bir mesai var" : "Mesaiyi başlat"}
+                style={{
+                    opacity: shiftActive ? 0.5 : 1,
+                    cursor: shiftActive || txLoading ? "not-allowed" : "pointer",
+                }}
             >
-                🕐 Start Shift
+                {txLoading && !shiftActive ? "⏳ " : ""}🕐 Mesai Başlat
             </button>
             <button
-                className="clock-btn clock-out"
+                className={`clock-btn clock-out ${!shiftActive ? "disabled-shift" : ""}`}
                 onClick={onClockOut}
                 disabled={txLoading || !shiftActive}
-                title={!shiftActive ? "No active shift" : "End shift"}
+                title={txLoading ? "İşlem devam ediyor..." : !shiftActive ? "Aktif mesai yok" : "Mesaiyi bitir"}
+                style={{
+                    opacity: !shiftActive ? 0.5 : 1,
+                    cursor: !shiftActive || txLoading ? "not-allowed" : "pointer",
+                }}
             >
-                🕐 End Shift
+                {txLoading && shiftActive ? "⏳ " : ""}🕐 Mesai Bitir
             </button>
             <div className="production-inline-form">
                 <input
@@ -51,10 +59,16 @@ function ShiftControls({
                     min={1}
                     value={productionUnits}
                     onChange={(e) => onChangeProductionUnits(Number(e.target.value))}
-                    placeholder="Units"
+                    placeholder="Birim"
                     disabled={!shiftActive || txLoading}
+                    title={!shiftActive ? "Önce mesai başlatın" : "Üretim birimi"}
                 />
-                <button className="quick-add-btn" onClick={onQuickAdd} disabled={!shiftActive || txLoading || productionUnits <= 0} title="Quick add 1 unit">
+                <button
+                    className="quick-add-btn"
+                    onClick={onQuickAdd}
+                    disabled={!shiftActive || txLoading || productionUnits <= 0}
+                    title={!shiftActive ? "Önce mesai başlatın" : "Hızlı +1 birim ekle"}
+                >
                     +
                 </button>
                 <input
@@ -63,26 +77,27 @@ function ShiftControls({
                     max={100}
                     value={efficiencyPercentage}
                     onChange={(e) => onChangeEfficiency(Number(e.target.value))}
-                    placeholder="Eff%"
+                    placeholder="Verim%"
                     disabled={!shiftActive || txLoading}
+                    title={!shiftActive ? "Önce mesai başlatın" : "Verimlilik yüzdesi"}
                 />
                 <button
                     className="prod-btn"
                     onClick={onIncrementProduction}
                     disabled={!shiftActive || txLoading || productionUnits <= 0}
-                    title={!shiftActive ? "Start a shift first" : "Record production"}
+                    title={!shiftActive ? "Önce mesai başlatın" : "Üretimi kaydet"}
                 >
-                    📦 Record
+                    📦 Kaydet
                 </button>
             </div>
             {onDoorEntry && (
-                <button className="door-btn door-entry" onClick={onDoorEntry} disabled={txLoading}>
-                    🚪 Entry
+                <button className="door-btn door-entry" onClick={onDoorEntry} disabled={txLoading} title="Kapı girişi">
+                    🚪 Giriş
                 </button>
             )}
             {onDoorExit && (
-                <button className="door-btn door-exit" onClick={onDoorExit} disabled={txLoading}>
-                    🚪 Exit
+                <button className="door-btn door-exit" onClick={onDoorExit} disabled={txLoading} title="Kapı çıkışı">
+                    🚪 Çıkış
                 </button>
             )}
         </div>

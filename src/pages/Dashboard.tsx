@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import useScrollAnimation from "../hooks/useScrollAnimation";
 import "../styles/Home.css";
 import "../styles/DashboardEnhanced.css";
@@ -22,6 +22,7 @@ function Dashboard() {
     useScrollAnimation();
     const [selectedView, setSelectedView] = useState("overview");
     const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null);
+    const [isInitialLoad, setIsInitialLoad] = useState(true);
     const currentAccount = useCurrentAccount();
 
     const { events: allEvents, loading: eventsLoading } = useIdentityEvents("*");
@@ -116,6 +117,13 @@ function Dashboard() {
         ];
     }, [workerCards, machines, parsedEvents.doorEvents, contractStats]);
 
+    // Track initial load
+    useEffect(() => {
+        if (!eventsLoading && !loadingCards) {
+            setIsInitialLoad(false);
+        }
+    }, [eventsLoading, loadingCards]);
+
     if (!currentAccount) {
         return (
             <div className="text-center" style={{ paddingTop: "5rem" }}>
@@ -128,12 +136,36 @@ function Dashboard() {
         );
     }
 
-    if (eventsLoading || loadingCards) {
+    if ((eventsLoading || loadingCards) && isInitialLoad) {
         return <LoadingSpinner size="large" message="Loading dashboard data..." />;
     }
 
     return (
-        <div className="dashboard-page fade-in">
+        <div className="dashboard-page fade-in" style={{ position: "relative" }}>
+            {/* Background loading indicator */}
+            {(eventsLoading || loadingCards) && !isInitialLoad && (
+                <div
+                    style={{
+                        position: "fixed",
+                        top: "1rem",
+                        right: "1rem",
+                        zIndex: 9999,
+                        backgroundColor: "rgba(0, 123, 255, 0.9)",
+                        color: "white",
+                        padding: "0.5rem 1rem",
+                        borderRadius: "8px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+                        fontSize: "0.9rem",
+                        fontWeight: 500,
+                    }}
+                >
+                    <div className="spinner" style={{ width: "16px", height: "16px", borderWidth: "2px" }}></div>
+                    Updating...
+                </div>
+            )}
             {/* Animated Background */}
             <div className="animated-background" aria-hidden="true">
                 <div className="floating-shape shape-1"></div>

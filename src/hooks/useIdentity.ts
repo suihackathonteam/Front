@@ -28,6 +28,7 @@ export function useWorkerCard() {
     const [workerCard, setWorkerCard] = useState<WorkerCard | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
     const fetchWorkerCard = useCallback(async () => {
         if (!account?.address) {
             setWorkerCard(null);
@@ -73,11 +74,11 @@ export function useWorkerCard() {
         } finally {
             setLoading(false);
         }
-    }, [account?.address, client]);
+    }, [account?.address]);
 
     useEffect(() => {
         fetchWorkerCard();
-    }, [fetchWorkerCard]);
+    }, [account?.address]);
 
     return { workerCard, loading, error, refetch: fetchWorkerCard };
 }
@@ -255,11 +256,11 @@ export function useDoors() {
         } finally {
             setLoading(false);
         }
-    }, [client]);
+    }, []);
 
     useEffect(() => {
         fetchDoors();
-    }, [fetchDoors]);
+    }, []);
 
     return { doors, loading, error, refetch: fetchDoors };
 }
@@ -354,11 +355,11 @@ export function useMachines() {
         } finally {
             setLoading(false);
         }
-    }, [client]);
+    }, []);
 
     useEffect(() => {
         fetchMachines();
-    }, [fetchMachines]);
+    }, []);
 
     return { machines, loading, error, refetch: fetchMachines };
 }
@@ -461,7 +462,7 @@ export function useWorkerDoorAccessHistory(workerCardId?: string) {
         };
 
         fetchHistory();
-    }, [workerCardId, client]);
+    }, [workerCardId]);
 
     return { doorAccessHistory, loading };
 }
@@ -499,7 +500,7 @@ export function useWorkerMachineUsageHistory(workerCardId?: string) {
         };
 
         fetchHistory();
-    }, [workerCardId, client]);
+    }, [workerCardId]);
 
     return { machineUsageHistory, loading };
 }
@@ -537,7 +538,7 @@ export function useWorkerShiftHistory(workerCardId?: string) {
         };
 
         fetchHistory();
-    }, [workerCardId, client]);
+    }, [workerCardId]);
 
     return { shiftHistory, loading };
 }
@@ -578,7 +579,7 @@ export function useWorkerAwardHistory(workerCardId?: string) {
         };
 
         fetchHistory();
-    }, [workerCardId, client]);
+    }, [workerCardId]);
 
     return { awardHistory, totalAwardPoints, loading };
 }
@@ -618,7 +619,7 @@ export function useRegistryInfo() {
         };
 
         fetchInfo();
-    }, [client]);
+    }, []);
 
     return { registryInfo, loading };
 }
@@ -657,7 +658,7 @@ export function useRecentDoorAccess() {
         // Refresh every 15 seconds
         const interval = setInterval(fetchData, 15000);
         return () => clearInterval(interval);
-    }, [client]);
+    }, []);
 
     return { recentDoorAccess, loading };
 }
@@ -696,7 +697,7 @@ export function useRecentMachineUsage() {
         // Refresh every 15 seconds
         const interval = setInterval(fetchData, 15000);
         return () => clearInterval(interval);
-    }, [client]);
+    }, []);
 
     return { recentMachineUsage, loading };
 }
@@ -735,7 +736,7 @@ export function useRecentShifts() {
         // Refresh every 10 seconds
         const interval = setInterval(fetchData, 10000);
         return () => clearInterval(interval);
-    }, [client]);
+    }, []);
 
     return { recentShifts, loading };
 }
@@ -774,7 +775,7 @@ export function useRecentAwards() {
         // Refresh every 15 seconds
         const interval = setInterval(fetchData, 15000);
         return () => clearInterval(interval);
-    }, [client]);
+    }, []);
 
     return { recentAwards, loading };
 }
@@ -872,14 +873,14 @@ export function useAllWorkerCards() {
         } finally {
             setLoading(false);
         }
-    }, [client, account?.address]);
+    }, [account?.address]);
 
     useEffect(() => {
         fetchWorkerCards();
         // Refresh every 30 seconds
         const interval = setInterval(fetchWorkerCards, 30000);
         return () => clearInterval(interval);
-    }, [fetchWorkerCards]);
+    }, [account?.address]);
 
     return { workerCards, loading, error, refetch: fetchWorkerCards };
 }
@@ -970,14 +971,14 @@ export function useDashboardStats() {
         } finally {
             setLoading(false);
         }
-    }, [client]);
+    }, []);
 
     useEffect(() => {
         fetchStats();
         // Refresh every 10 seconds for real-time updates
         const interval = setInterval(fetchStats, 10000);
         return () => clearInterval(interval);
-    }, [fetchStats]);
+    }, []);
 
     return { stats, loading, error, refetch: fetchStats };
 }

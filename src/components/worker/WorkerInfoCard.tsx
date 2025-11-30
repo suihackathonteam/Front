@@ -16,8 +16,66 @@ interface WorkerInfoCardProps {
 function WorkerInfoCard({ workerCard, shiftActive, currentWorkTime, formatWorkHours }: WorkerInfoCardProps) {
     return (
         <div className="info-grid worker-info-card">
+            {shiftActive && (
+                <div
+                    className="shift-status-banner active-shift"
+                    style={{
+                        gridColumn: "1 / -1",
+                        backgroundColor: "#10b981",
+                        color: "white",
+                        padding: "1rem 1.5rem",
+                        borderRadius: "12px",
+                        marginBottom: "1rem",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "1rem",
+                        boxShadow: "0 4px 12px rgba(16, 185, 129, 0.3)",
+                        animation: "pulse 2s infinite",
+                    }}
+                >
+                    <span style={{ fontSize: "1.5rem" }}>🟢</span>
+                    <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: "bold", fontSize: "1.1rem", marginBottom: "0.25rem" }}>Mesai Aktif</div>
+                        <div style={{ fontSize: "0.9rem", opacity: 0.9 }}>Süre: {formatWorkHours(currentWorkTime)}</div>
+                    </div>
+                    <div
+                        style={{
+                            backgroundColor: "rgba(255,255,255,0.2)",
+                            padding: "0.5rem 1rem",
+                            borderRadius: "8px",
+                            fontSize: "0.85rem",
+                            fontWeight: "600",
+                        }}
+                    >
+                        Blockchain'de Kayıtlı
+                    </div>
+                </div>
+            )}
+            {!shiftActive && (
+                <div
+                    className="shift-status-banner inactive-shift"
+                    style={{
+                        gridColumn: "1 / -1",
+                        backgroundColor: "var(--section-bg)",
+                        border: "2px solid var(--border-color)",
+                        color: "var(--muted)",
+                        padding: "1rem 1.5rem",
+                        borderRadius: "12px",
+                        marginBottom: "1rem",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "1rem",
+                    }}
+                >
+                    <span style={{ fontSize: "1.5rem" }}>⭕</span>
+                    <div>
+                        <div style={{ fontWeight: "bold", fontSize: "1.1rem" }}>Mesai Başlatılmamış</div>
+                        <div style={{ fontSize: "0.9rem" }}>Mesaiyi başlatmak için yukarıdaki "Mesai Başlat" butonuna tıklayın</div>
+                    </div>
+                </div>
+            )}
             <div className="info-card">
-                <h3>👤 Personal Information</h3>
+                "<h3>👤 Personal Information</h3>
                 <div className="info-row">
                     <span className="label">Card No:</span>
                     <span className="value">{workerCard.card_number}</span>
