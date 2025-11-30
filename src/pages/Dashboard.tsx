@@ -100,7 +100,7 @@ function Dashboard() {
         console.log("Active doors:", filtered);
         return filtered;
     }, [doors]);
-    
+
     const activeMachines = useMemo(() => {
         const filtered = machines.filter((machine) => machine.is_active);
         console.log("All machines:", machines);

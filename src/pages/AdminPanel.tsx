@@ -1,17 +1,17 @@
 import { useState, useEffect } from "react";
 import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useAdminCap, useIdentityTransaction, useDoors, useMachines } from "../hooks/useIdentity";
-import { 
-    buildIssueWorkerCardTx, 
-    buildRegisterDoorTx, 
-    buildRegisterMachineTx, 
+import {
+    buildIssueWorkerCardTx,
+    buildRegisterDoorTx,
+    buildRegisterMachineTx,
     buildIssueAwardTx,
     buildUpdateDoorTx,
     buildUpdateMachineTx,
     buildActivateDoorTx,
     buildDeactivateDoorTx,
     buildActivateMachineTx,
-    buildDeactivateMachineTx
+    buildDeactivateMachineTx,
 } from "../utils/transactions";
 import SuiConnectButton from "../components/SuiConnectButton";
 import WorkerCardForm from "../components/admin/WorkerCardForm";
@@ -54,13 +54,15 @@ function AdminPanel() {
         name: "",
         location: "",
     });
-    const [editMachineModal, setEditMachineModal] = useState<{ open: boolean; machineId: number | null; name: string; machine_type: string; location: string }>({
-        open: false,
-        machineId: null,
-        name: "",
-        machine_type: "",
-        location: "",
-    });
+    const [editMachineModal, setEditMachineModal] = useState<{ open: boolean; machineId: number | null; name: string; machine_type: string; location: string }>(
+        {
+            open: false,
+            machineId: null,
+            name: "",
+            machine_type: "",
+            location: "",
+        }
+    );
 
     // Track initial load
     useEffect(() => {
@@ -301,12 +303,12 @@ function AdminPanel() {
                             </div>
                             <div className="table-card card">
                                 <h2>🚪 Existing Doors</h2>
-                                <DoorList 
-                                    doors={doors} 
-                                    loading={doorsLoading} 
-                                    onEdit={handleEditDoor} 
-                                    onActivate={handleActivateDoor} 
-                                    onDeactivate={handleDeactivateDoor} 
+                                <DoorList
+                                    doors={doors}
+                                    loading={doorsLoading}
+                                    onEdit={handleEditDoor}
+                                    onActivate={handleActivateDoor}
+                                    onDeactivate={handleDeactivateDoor}
                                 />
                             </div>
                         </>
@@ -333,12 +335,12 @@ function AdminPanel() {
                             </div>
                             <div className="table-card card">
                                 <h2>⚙️ Existing Devices</h2>
-                                <MachineList 
-                                    machines={machines} 
-                                    loading={machinesLoading} 
-                                    onEdit={handleEditMachine} 
-                                    onActivate={handleActivateMachine} 
-                                    onDeactivate={handleDeactivateMachine} 
+                                <MachineList
+                                    machines={machines}
+                                    loading={machinesLoading}
+                                    onEdit={handleEditMachine}
+                                    onActivate={handleActivateMachine}
+                                    onDeactivate={handleDeactivateMachine}
                                 />
                             </div>
                         </>
