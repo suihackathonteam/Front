@@ -4,7 +4,7 @@ import "../styles/Home.css";
 import "../styles/DashboardEnhanced.css";
 import { useCurrentAccount } from "@mysten/dapp-kit";
 import SuiConnectButton from "../components/SuiConnectButton";
-import { useIdentityEvents, useDoors, useMachines } from "../hooks/useIdentity";
+import { useIdentityEvents, useDoors, useMachines, useAllWorkerCards } from "../hooks/useIdentity";
 import type { EventData } from "../types/sui";
 import StatCard from "../components/dashboard/StatCard";
 import DoorAccessChart from "../components/dashboard/DoorAccessChart";
@@ -28,26 +28,17 @@ function Dashboard() {
 
     const { doors, loading: doorsLoading } = useDoors();
     const { machines, loading: machinesLoading } = useMachines();
+    const { workerCards: rawWorkerCards, loading: loadingCards } = useAllWorkerCards();
 
-    // Memoize worker cards to prevent unnecessary re-renders
+    // Enrich worker cards with event counts for EmployeeList component
     const workerCards = useMemo(() => {
-        if (!currentAccount) return [];
-        const uniqueWorkers = new Map();
-        allEvents.forEach((event: any) => {
-            if (!isValidEvent(event)) return;
-            const address = String(event.parsedJson?.worker_address || "");
-            if (!address || uniqueWorkers.has(address)) return;
-            uniqueWorkers.set(address, {
-                id: address,
-                worker_address: address,
-                name: `Worker ${address.slice(0, 6)}`,
-                department: "General",
-            });
+        return rawWorkerCards.map(card => {
+            const eventCount = allEvents.filter((event: any) => 
+                isValidEvent(event) && event.parsedJson?.worker_address === card.worker_address
+            ).length;
+            return { ...card, event_count: eventCount };
         });
-        return Array.from(uniqueWorkers.values());
-    }, [currentAccount, allEvents.length]); // Only re-compute when event count changes
-
-    const [loadingCards] = useState(false);
+    }, [rawWorkerCards, allEvents]);
 
     const parsedEvents = useMemo(() => {
         const doorEvents: any[] = [];
@@ -99,13 +90,21 @@ function Dashboard() {
     }, [parsedEvents.machineEvents]);
 
     const realtimeStats = useMemo(() => {
+        const activeWorkers = workerCards.filter(card => card.is_active).length;
+        const totalProduction = workerCards.reduce((acc, card) => acc + (card.total_production || 0), 0);
+        const activeMachines = machines.filter(m => m.is_active).length;
+        const todaysEntries = parsedEvents.doorEvents.filter(e => 
+            new Date(e.timestamp).toDateString() === new Date().toDateString() && 
+            Number(e.access_type) === 2
+        ).length;
+
         return [
-            { title: "Active Workers", value: workerCards.length, icon: "👷" },
-            { title: "Active Machines", value: machineUsageData.length, icon: "⚙️" },
-            { title: "Total Production", value: machineUsageData.reduce((acc, m) => acc + m.production, 0), icon: "📦" },
-            { title: "Today's Entries", value: parsedEvents.doorEvents.filter(e => new Date(e.timestamp).toDateString() === new Date().toDateString() && Number(e.access_type) === 2).length, icon: "🚪" },
+            { title: "Active Workers", value: activeWorkers, icon: "👷" },
+            { title: "Active Machines", value: activeMachines, icon: "⚙️" },
+            { title: "Total Production", value: totalProduction, icon: "📦" },
+            { title: "Today's Entries", value: todaysEntries, icon: "🚪" },
         ];
-    }, [workerCards, machineUsageData, parsedEvents]);
+    }, [workerCards, machines, parsedEvents.doorEvents]);
 
     if (!currentAccount) {
         return (

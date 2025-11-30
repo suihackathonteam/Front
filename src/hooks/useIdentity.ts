@@ -786,3 +786,95 @@ export function useRecentAwards() {
 
     return { recentAwards, loading };
 }
+
+/**
+ * All Worker Cards hook - fetches all registered worker cards from SystemRegistry
+ */
+export function useAllWorkerCards() {
+    const client = useSuiClient();
+    const [workerCards, setWorkerCards] = useState<WorkerCard[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const fetchWorkerCards = useCallback(async () => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            // Fetch the SystemRegistry object
+            const registry = await client.getObject({
+                id: CONTRACT_CONFIG.SYSTEM_REGISTRY_ID,
+                options: { showContent: true },
+            });
+
+            if (!registry.data?.content || registry.data.content.dataType !== "moveObject") {
+                setWorkerCards([]);
+                return;
+            }
+
+            const fields = registry.data.content.fields as RegistryFields;
+            const workerCardsTableId = fields.worker_cards?.fields?.id?.id;
+
+            if (!workerCardsTableId) {
+                setWorkerCards([]);
+                return;
+            }
+
+            // Fetch dynamic fields (worker cards from the table)
+            const dynamicFields = await client.getDynamicFields({
+                parentId: workerCardsTableId,
+            });
+
+            const cardPromises = dynamicFields.data.map(async (field) => {
+                try {
+                    const cardObj = await client.getObject({
+                        id: field.objectId,
+                        options: { showContent: true },
+                    });
+
+                    if (cardObj.data?.content && cardObj.data.content.dataType === "moveObject") {
+                        const cardFields = (cardObj.data.content as any).fields.value.fields;
+                        const decoder = new TextDecoder();
+                        
+                        return {
+                            id: field.objectId,
+                            worker_address: cardFields.worker_address || "",
+                            card_number: cardFields.card_number ? decoder.decode(new Uint8Array(cardFields.card_number)) : "",
+                            name: cardFields.name ? decoder.decode(new Uint8Array(cardFields.name)) : "",
+                            department: cardFields.department ? decoder.decode(new Uint8Array(cardFields.department)) : "",
+                            is_active: cardFields.is_active ?? false,
+                            total_work_hours: Number(cardFields.total_work_hours || 0),
+                            total_production: Number(cardFields.total_production || 0),
+                            efficiency_score: Number(cardFields.efficiency_score || 0),
+                            last_checkpoint_hash: cardFields.last_checkpoint_hash || [],
+                            current_shift_start_ms: Number(cardFields.current_shift_start_ms || 0),
+                            is_in_shift: Boolean(cardFields.is_in_shift),
+                        } as WorkerCard;
+                    }
+                    return null;
+                } catch (err) {
+                    console.warn("Error fetching individual worker card:", err);
+                    return null;
+                }
+            });
+
+            const cards = (await Promise.all(cardPromises)).filter((card): card is WorkerCard => card !== null);
+            setWorkerCards(cards);
+        } catch (err) {
+            console.error("Error fetching worker cards:", err);
+            setError(err instanceof Error ? err.message : "Unknown error");
+            setWorkerCards([]);
+        } finally {
+            setLoading(false);
+        }
+    }, [client]);
+
+    useEffect(() => {
+        fetchWorkerCards();
+        // Refresh every 30 seconds
+        const interval = setInterval(fetchWorkerCards, 30000);
+        return () => clearInterval(interval);
+    }, [fetchWorkerCards]);
+
+    return { workerCards, loading, error, refetch: fetchWorkerCards };
+}
