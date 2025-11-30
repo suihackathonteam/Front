@@ -8,8 +8,8 @@
 }
 
 .loading-spinner {
-    border: 3px solid rgba(255, 255, 255, 0.1);
-    border-top: 3px solid #646cff;
+    border: 3px solid var(--border-color);
+    border-top: 3px solid var(--primary-color);
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
@@ -33,7 +33,7 @@
 
 .loading-message {
     margin-top: 1rem;
-    color: rgba(255, 255, 255, 0.7);
+    color: var(--text-color-secondary);
     font-size: 0.9rem;
 }
 
@@ -58,8 +58,8 @@
 }
 
 .error-message-container.error {
-    background-color: rgba(220, 38, 38, 0.1);
-    border: 1px solid rgba(220, 38, 38, 0.3);
+    background-color: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
 .error-message-container.warning {
@@ -78,14 +78,14 @@
 }
 
 .error-text {
-    color: rgba(255, 255, 255, 0.9);
+    color: var(--text-color);
     font-size: 0.9rem;
 }
 
 .error-dismiss {
     background: none;
     border: none;
-    color: rgba(255, 255, 255, 0.6);
+    color: var(--text-color-secondary);
     font-size: 1.5rem;
     cursor: pointer;
     padding: 0;
@@ -98,7 +98,7 @@
 }
 
 .error-dismiss:hover {
-    color: rgba(255, 255, 255, 0.9);
+    color: var(--text-color);
 }
 
 /* Success Notification */
@@ -112,7 +112,7 @@
     padding: 1rem 1.5rem;
     background: linear-gradient(135deg, #10b981 0%, #059669 100%);
     border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     z-index: 1000;
     animation: slideInFromRight 0.3s ease-out;
 }

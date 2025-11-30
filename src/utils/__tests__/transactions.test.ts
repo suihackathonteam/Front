@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { buildIssueWorkerCardTx, buildRegisterDoorTx, buildRegisterMachineTx, buildClockInOutTx, buildAddNewAdminTx } from "../transactions";
+import { buildRegisterMachineWithCategoryTx, buildUpdateMachineWithCategoryTx } from "../transactions";
+import { buildRecordDoorAccessTx, buildIncrementProductionTx, buildRecordMachineUsageTx } from "../transactions";
 
 const MOCK_ADMIN_CAP_ID = "0x123";
 const MOCK_REGISTRY_ID = "0x456";
@@ -50,6 +52,36 @@ describe("Transaction Builders", () => {
     it("should build add new admin transaction", () => {
         const tx = buildAddNewAdminTx(MOCK_ADMIN_CAP_ID, MOCK_ADDRESS);
 
+        expect(tx).toBeDefined();
+        expect(tx.getData).toBeDefined();
+    });
+
+    it("should build record door access transaction", () => {
+        const tx = buildRecordDoorAccessTx(MOCK_WORKER_CARD_ID, 1, 2);
+        expect(tx).toBeDefined();
+        expect(tx.getData).toBeDefined();
+    });
+
+    it("should build increment production transaction", () => {
+        const tx = buildIncrementProductionTx(MOCK_WORKER_CARD_ID, MOCK_REGISTRY_ID, 5, 90);
+        expect(tx).toBeDefined();
+        expect(tx.getData).toBeDefined();
+    });
+
+    it("should build record machine usage transaction", () => {
+        const tx = buildRecordMachineUsageTx(MOCK_WORKER_CARD_ID, { machine_id: 1, usage_duration_ms: 1000, production_count: 2, efficiency_percentage: 80 });
+        expect(tx).toBeDefined();
+        expect(tx.getData).toBeDefined();
+    });
+
+    it("should build update machine with category transaction", () => {
+        const tx = buildUpdateMachineWithCategoryTx(MOCK_ADMIN_CAP_ID, 1, { name: "CNC Updated", machine_type: "Lathe", location: "A1", category: "Lathe" });
+        expect(tx).toBeDefined();
+        expect(tx.getData).toBeDefined();
+    });
+
+    it("should build register machine with category transaction", () => {
+        const tx = buildRegisterMachineWithCategoryTx(MOCK_ADMIN_CAP_ID, { name: "CNC", machine_type: "Lathe", location: "A1", category: "Lathe" });
         expect(tx).toBeDefined();
         expect(tx.getData).toBeDefined();
     });

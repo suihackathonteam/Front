@@ -8,6 +8,7 @@ interface ShiftControlsProps {
     onChangeProductionUnits: (v: number) => void;
     onChangeEfficiency: (v: number) => void;
     onIncrementProduction: () => void;
+    onQuickAdd?: () => void;
     onDoorEntry?: () => Promise<void> | void;
     onDoorExit?: () => Promise<void> | void;
 }
@@ -22,6 +23,7 @@ function ShiftControls({
     onChangeProductionUnits,
     onChangeEfficiency,
     onIncrementProduction,
+    onQuickAdd,
     onDoorEntry,
     onDoorExit,
 }: ShiftControlsProps) {
@@ -52,6 +54,9 @@ function ShiftControls({
                     placeholder="Units"
                     disabled={!shiftActive || txLoading}
                 />
+                <button className="quick-add-btn" onClick={onQuickAdd} disabled={!shiftActive || txLoading || productionUnits <= 0} title="Quick add 1 unit">
+                    +
+                </button>
                 <input
                     type="number"
                     min={0}

@@ -21,7 +21,7 @@ function WorkerManagementForm({
 }: WorkerManagementFormProps) {
     return (
         <div className="manage-section">
-            <div className="admin-form-card">
+            <div className="admin-form-card card">
                 <h2>Update Worker Card</h2>
                 <form onSubmit={onUpdateSubmit}>
                     <div className="form-group">
@@ -60,7 +60,7 @@ function WorkerManagementForm({
                 </form>
             </div>
 
-            <div className="admin-form-card">
+            <div className="admin-form-card card">
                 <h2>Worker Card Status</h2>
                 <form onSubmit={(e) => e.preventDefault()}>
                     <div className="form-group">

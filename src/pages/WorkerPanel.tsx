@@ -85,10 +85,12 @@ function WorkerPanel() {
 
     if (!account) {
         return (
-            <div className="worker-container">
-                <div className="worker-connect">
-                    <h2>👤 Worker Panel</h2>
-                    <p>Please connect your wallet to access the panel</p>
+            <div className="text-center" style={{ paddingTop: '5rem' }}>
+                <div className="card" style={{ maxWidth: '500px', margin: '0 auto', padding: '3rem 2rem' }}>
+                    <h2 style={{ marginBottom: '1rem' }}>👤 Worker Panel</h2>
+                    <p style={{ color: 'var(--text-color-secondary)', marginBottom: '2rem' }}>
+                        Please connect your wallet to access the panel.
+                    </p>
                     <SuiConnectButton />
                 </div>
             </div>
@@ -97,10 +99,10 @@ function WorkerPanel() {
 
     if (cardLoading) {
         return (
-            <div className="worker-container">
-                <div className="worker-loading">
-                    <div className="spinner"></div>
-                    <p>Checking Worker Card...</p>
+            <div className="text-center" style={{ paddingTop: '5rem' }}>
+                <div className="card" style={{ maxWidth: '500px', margin: '0 auto', padding: '3rem 2rem' }}>
+                    <div className="spinner" style={{ margin: '0 auto 1.5rem' }}></div>
+                    <p style={{ color: 'var(--text-color-secondary)' }}>Checking Worker Card...</p>
                 </div>
             </div>
         );
@@ -108,14 +110,26 @@ function WorkerPanel() {
 
     if (!workerCard) {
         return (
-            <div className="worker-container">
-                <div className="worker-no-card">
-                    <h2>⚠️ Worker Card Not Found</h2>
-                    <p>No Worker Card has been created for this address yet.</p>
-                    <p className="address-info">
-                        Connected address: <code>{account.address}</code>
+            <div className="text-center" style={{ paddingTop: '5rem' }}>
+                <div className="card" style={{ maxWidth: '600px', margin: '0 auto', padding: '3rem 2rem' }}>
+                    <h2 style={{ marginBottom: '1rem', color: '#ff9500' }}>⚠️ Worker Card Not Found</h2>
+                    <p style={{ color: 'var(--text-color-secondary)', marginBottom: '1rem' }}>
+                        No Worker Card has been created for this address yet.
                     </p>
-                    <p>Please request a Worker Card from the system administrator.</p>
+                    <div style={{ 
+                        backgroundColor: 'var(--section-bg)', 
+                        padding: '1rem', 
+                        borderRadius: '8px',
+                        marginBottom: '1rem',
+                        wordBreak: 'break-all'
+                    }}>
+                        <small style={{ color: 'var(--text-color-secondary)' }}>Connected address:</small>
+                        <br />
+                        <code style={{ fontSize: '0.9rem' }}>{account.address}</code>
+                    </div>
+                    <p style={{ color: 'var(--text-color-secondary)' }}>
+                        Please request a Worker Card from the system administrator.
+                    </p>
                 </div>
             </div>
         );
@@ -123,14 +137,26 @@ function WorkerPanel() {
 
     if (!workerCard.is_active) {
         return (
-            <div className="worker-container">
-                <div className="worker-no-card">
-                    <h2>🚫 Worker Card Disabled</h2>
-                    <p>Your card has been disabled by the system administrator.</p>
-                    <p className="address-info">
-                        Connected address: <code>{account.address}</code>
+            <div className="text-center" style={{ paddingTop: '5rem' }}>
+                <div className="card" style={{ maxWidth: '600px', margin: '0 auto', padding: '3rem 2rem' }}>
+                    <h2 style={{ marginBottom: '1rem', color: '#ff3b30' }}>🚫 Worker Card Disabled</h2>
+                    <p style={{ color: 'var(--text-color-secondary)', marginBottom: '1rem' }}>
+                        Your card has been disabled by the system administrator.
                     </p>
-                    <p>Please contact the system administrator for more information.</p>
+                    <div style={{ 
+                        backgroundColor: 'var(--section-bg)', 
+                        padding: '1rem', 
+                        borderRadius: '8px',
+                        marginBottom: '1rem',
+                        wordBreak: 'break-all'
+                    }}>
+                        <small style={{ color: 'var(--text-color-secondary)' }}>Connected address:</small>
+                        <br />
+                        <code style={{ fontSize: '0.9rem' }}>{account.address}</code>
+                    </div>
+                    <p style={{ color: 'var(--text-color-secondary)' }}>
+                        Please contact the system administrator for more information.
+                    </p>
                 </div>
             </div>
         );
@@ -183,13 +209,33 @@ function WorkerPanel() {
         });
     };
 
+    const handleQuickAddProduction = () => {
+        if (!derivedShiftActive) {
+            alert("⚠️ Start a shift before recording production.");
+            return;
+        }
+        const tx = buildIncrementProductionTx(workerCard!.id, CONTRACT_CONFIG.SYSTEM_REGISTRY_ID, 1, efficiencyPercentage);
+        executeTransaction(tx, {
+            onSuccess: () => {
+                setShowSuccess(true);
+                refetchWorkerCard();
+                setTimeout(() => setShowSuccess(false), 2000);
+            },
+            onError: (err) => alert("⚠️ Failed to increment production: " + err),
+        });
+    };
+
     const handleDoorEntry = async () => {
         if (!workerCard) return;
         const tx = buildRecordDoorAccessTx(workerCard.id, selectedDoorId, 2); // 2 = entry
         executeTransaction(tx, {
             onSuccess: () => {
                 setShowSuccess(true);
+                refetchWorkerCard();
                 setTimeout(() => setShowSuccess(false), 3000);
+            },
+            onError: (err) => {
+                alert("⚠️ Failed to record entry: " + err);
             },
         });
     };
@@ -200,7 +246,11 @@ function WorkerPanel() {
         executeTransaction(tx, {
             onSuccess: () => {
                 setShowSuccess(true);
+                refetchWorkerCard();
                 setTimeout(() => setShowSuccess(false), 3000);
+            },
+            onError: (err) => {
+                alert("⚠️ Failed to record exit: " + err);
             },
         });
     };
@@ -251,6 +301,7 @@ function WorkerPanel() {
                     onChangeProductionUnits={setProductionUnits}
                     onChangeEfficiency={setEfficiencyPercentage}
                     onIncrementProduction={handleIncrementProduction}
+                    onQuickAdd={handleQuickAddProduction}
                     txLoading={txLoading}
                     shiftActive={derivedShiftActive}
                 />
@@ -329,7 +380,7 @@ function WorkerPanel() {
                             disabled={txLoading || machineUsageMinutes * 60000 + machineUsageSeconds * 1000 <= 0}
                             title={machineUsageMinutes * 60000 + machineUsageSeconds * 1000 <= 0 ? "Duration required" : "Record usage"}
                         >
-                            Kaydet
+                            Save
                         </button>
                     </div>
                 )}
@@ -347,7 +398,7 @@ function WorkerPanel() {
                 </button>
             </div>
 
-            <div className="worker-content">
+            <div className="worker-content" style={{ marginTop: '2rem' }}>
                 {activeTab === "info" && (
                     <WorkerInfoCard
                         workerCard={workerCard}

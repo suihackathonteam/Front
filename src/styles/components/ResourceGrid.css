@@ -7,19 +7,20 @@
 }
 
 .resource-card {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--section-bg);
+    border: 1px solid var(--border-color);
     border-radius: 12px;
     padding: 1.5rem;
     display: flex;
     gap: 1rem;
     transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .resource-card:hover {
-    background: rgba(255, 255, 255, 0.05);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border-color: var(--primary-color);
 }
 
 .door-card {
@@ -38,7 +39,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--secondary-background);
     border-radius: 10px;
 }
 
@@ -49,7 +50,7 @@
 
 .resource-info h4 {
     font-size: 1.1rem;
-    color: rgba(255, 255, 255, 0.9);
+    color: var(--text-color);
     margin: 0 0 0.5rem 0;
     font-weight: 600;
     overflow: hidden;
@@ -59,7 +60,7 @@
 
 .resource-location {
     font-size: 0.85rem;
-    color: rgba(255, 255, 255, 0.6);
+    color: var(--text-color-secondary);
     margin: 0 0 0.75rem 0;
 }
 
@@ -68,7 +69,7 @@
     gap: 1rem;
     margin-bottom: 0.75rem;
     font-size: 0.85rem;
-    color: rgba(255, 255, 255, 0.7);
+    color: var(--text-color-secondary);
 }
 
 .resource-meta {
@@ -76,6 +77,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
+    flex-wrap: wrap;
 }
 
 .resource-status {
@@ -86,18 +88,18 @@
 }
 
 .resource-status.active {
-    background: rgba(16, 185, 129, 0.2);
+    background: rgba(16, 185, 129, 0.1);
     color: #10b981;
 }
 
 .resource-status.inactive {
-    background: rgba(107, 114, 128, 0.2);
+    background: rgba(107, 114, 128, 0.1);
     color: #9ca3af;
 }
 
 .resource-id {
     font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.5);
+    color: var(--text-color-secondary);
 }
 
 .resource-grid-empty {
@@ -105,10 +107,10 @@
     align-items: center;
     justify-content: center;
     min-height: 200px;
-    color: rgba(255, 255, 255, 0.5);
+    color: var(--text-color-secondary);
     font-size: 1rem;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--section-bg);
+    border: 1px solid var(--border-color);
     border-radius: 12px;
     padding: 2rem;
 }

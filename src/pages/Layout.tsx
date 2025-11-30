@@ -1,58 +1,69 @@
 import { Outlet, useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { useCurrentAccount, useDisconnectWallet } from "@mysten/dapp-kit";
 import SuiConnectButton from "../components/SuiConnectButton";
 import { useAdminCap } from "../hooks/useIdentity";
-import "../styles/Dashboard.css";
+import "../styles/Modern.css";
 
 function Layout() {
     const currentAccount = useCurrentAccount();
     const { mutate: disconnect } = useDisconnectWallet();
     const { isAdmin } = useAdminCap();
     const navigate = useNavigate();
+    const [menuOpen, setMenuOpen] = useState(false);
 
     const handleLogout = () => {
         disconnect();
         navigate("/");
     };
 
+    const handleNavigate = (path: string) => {
+        navigate(path);
+        setMenuOpen(false);
+    };
+
     return (
-        <div className="app-root">
-            <header className="dashboard-header">
-                <div className="dashboard-header-content">
-                    <div className="logo" onClick={() => navigate("/")} style={{ cursor: "pointer" }}>
-                        <h2>TeamPro</h2>
-                    </div>
-
-                    <nav className={`dashboard-nav`}>
-                        <a onClick={() => navigate("/")}>🏠 Home</a>
-                        <a onClick={() => navigate("/about")}>📖 About</a>
-                        <a onClick={() => navigate("/services")}>💼 Services</a>
-                        {currentAccount && (
-                            <>
-                                <a onClick={() => navigate("/dashboard")}>📊 Dashboard</a>
-                                <a onClick={() => navigate("/worker")}>👤 Worker</a>
-                            </>
-                        )}
-                        {isAdmin && (
-                            <a onClick={() => navigate("/admin")} style={{ color: "#43e97b" }}>
-                                🔐 Admin
-                            </a>
-                        )}
-                    </nav>
-
-                    <div className="user-section">
-                        <div className="sui-connect-wrapper">
-                            <SuiConnectButton />
-                        </div>
-                        {currentAccount && (
-                            <>
-                                <button className="logout-btn" onClick={handleLogout}>
-                                    Logout
-                                </button>
-                            </>
-                        )}
-                    </div>
+        <div className="app-root modern-layout">
+            <header className="app-topbar">
+                <div className="logo" onClick={() => navigate("/")}>
+                    <h2>TeamPro</h2>
                 </div>
+
+                <nav className={`dashboard-nav ${menuOpen ? "open" : ""}`}>
+                    <a onClick={() => handleNavigate("/")}>Home</a>
+                    <a onClick={() => handleNavigate("/about")}>About</a>
+                    <a onClick={() => handleNavigate("/services")}>Services</a>
+                    {currentAccount && (
+                        <>
+                            <a onClick={() => handleNavigate("/dashboard")}>Dashboard</a>
+                            <a onClick={() => handleNavigate("/worker")}>Worker</a>
+                        </>
+                    )}
+                    {isAdmin && (
+                        <a onClick={() => handleNavigate("/admin")} style={{ color: "var(--primary-color)" }}>
+                            Admin
+                        </a>
+                    )}
+                </nav>
+
+                <div className="user-section">
+                    <SuiConnectButton />
+                    {currentAccount && (
+                        <button className="logout-btn" onClick={handleLogout}>
+                            Logout
+                        </button>
+                    )}
+                </div>
+                
+                <button 
+                    className="mobile-menu-toggle" 
+                    onClick={() => setMenuOpen(!menuOpen)}
+                    aria-label="Toggle menu"
+                >
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
             </header>
 
             <main>

@@ -7,7 +7,7 @@ interface AwardIssuanceFormProps {
 
 function AwardIssuanceForm({ values, loading, onChange, onSubmit }: AwardIssuanceFormProps) {
     return (
-        <div className="admin-form-card">
+        <div className="admin-form-card card">
             <h2>Give Award to Employee</h2>
             <form onSubmit={onSubmit}>
                 <div className="form-group">

@@ -182,8 +182,7 @@ export function useDoors() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        const fetchDoors = async () => {
+    const fetchDoors = useCallback(async () => {
             try {
                 setLoading(true);
                 setError(null);
@@ -261,12 +260,13 @@ export function useDoors() {
             } finally {
                 setLoading(false);
             }
-        };
-
-        fetchDoors();
     }, [client]);
 
-    return { doors, loading, error };
+    useEffect(() => {
+        fetchDoors();
+    }, [fetchDoors]);
+
+    return { doors, loading, error, refetch: fetchDoors };
 }
 
 /**
@@ -278,8 +278,7 @@ export function useMachines() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        const fetchMachines = async () => {
+    const fetchMachines = useCallback(async () => {
             try {
                 setLoading(true);
                 setError(null);
@@ -363,12 +362,13 @@ export function useMachines() {
             } finally {
                 setLoading(false);
             }
-        };
-
-        fetchMachines();
     }, [client]);
 
-    return { machines, loading, error };
+    useEffect(() => {
+        fetchMachines();
+    }, [fetchMachines]);
+
+    return { machines, loading, error, refetch: fetchMachines };
 }
 
 /**

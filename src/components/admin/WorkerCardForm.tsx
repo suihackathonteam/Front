@@ -7,7 +7,7 @@ interface WorkerCardFormProps {
 
 function WorkerCardForm({ values, loading, onChange, onSubmit }: WorkerCardFormProps) {
     return (
-        <div className="admin-form-card">
+        <div className="admin-form-card card">
             <h2>Create New Worker Card</h2>
             <form onSubmit={onSubmit}>
                 <div className="form-group">

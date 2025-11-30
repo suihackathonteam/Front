@@ -1,5 +1,3 @@
-import "../styles/Dashboard.css";
-
 function Services() {
     const services = [
         {
@@ -53,86 +51,118 @@ function Services() {
     ];
 
     return (
-        <div className="dashboard-main">
-            <div className="dashboard-content">
-                <div className="content-header">
-                    <h1>Our Services</h1>
-                    <p>Comprehensive solutions we offer with TeamPro</p>
-                </div>
+        <div className="fade-in" style={{ maxWidth: '1400px', margin: '0 auto' }}>
+            <div className="page-header">
+                <h1>Our Services</h1>
+                <p>Comprehensive solutions we offer with TeamPro</p>
+            </div>
 
-                <div
-                    className="services-grid"
-                    style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "24px", marginTop: "24px" }}
-                >
-                    {services.map((service, index) => (
-                        <div
-                            key={index}
-                            className="chart-card"
-                            style={{ padding: "24px", transition: "transform 0.3s ease", cursor: "pointer" }}
-                            onMouseEnter={(e) => (e.currentTarget.style.transform = "translateY(-5px)")}
-                            onMouseLeave={(e) => (e.currentTarget.style.transform = "translateY(0)")}
-                        >
-                            <div style={{ fontSize: "3em", marginBottom: "16px" }}>{service.icon}</div>
-                            <h3 style={{ marginBottom: "12px", color: "#667eea" }}>{service.title}</h3>
-                            <p style={{ marginBottom: "16px", lineHeight: "1.6", opacity: 0.8 }}>{service.description}</p>
-                            <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                                {service.features.map((feature, idx) => (
-                                    <li
-                                        key={idx}
-                                        style={{
-                                            padding: "8px 0",
-                                            borderBottom: idx < service.features.length - 1 ? "1px solid rgba(255,255,255,0.1)" : "none",
-                                        }}
-                                    >
-                                        {feature}
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    ))}
-                </div>
+            <div
+                style={{ 
+                    display: "grid", 
+                    gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 300px), 1fr))", 
+                    gap: "1.5rem", 
+                    marginTop: "2rem" 
+                }}
+            >
+                {services.map((service, index) => (
+                    <div
+                        key={index}
+                        className="card"
+                        style={{ 
+                            padding: "2rem", 
+                            transition: "transform 0.3s ease, box-shadow 0.3s ease", 
+                            cursor: "pointer",
+                            display: 'flex',
+                            flexDirection: 'column',
+                            height: '100%'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = "translateY(-5px)";
+                            e.currentTarget.style.boxShadow = "0 8px 24px rgba(0, 0, 0, 0.12)";
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = "translateY(0)";
+                            e.currentTarget.style.boxShadow = "";
+                        }}
+                    >
+                        <div style={{ fontSize: "3em", marginBottom: "1rem" }}>{service.icon}</div>
+                        <h3 style={{ marginBottom: "1rem", color: "var(--primary-color)", fontSize: '1.25rem' }}>{service.title}</h3>
+                        <p style={{ marginBottom: "1.5rem", lineHeight: "1.6", color: 'var(--text-color-secondary)', flex: 1 }}>{service.description}</p>
+                        <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                            {service.features.map((feature, idx) => (
+                                <li
+                                    key={idx}
+                                    style={{
+                                        padding: "0.5rem 0",
+                                        borderBottom: idx < service.features.length - 1 ? "1px solid var(--border-color)" : "none",
+                                        fontSize: '0.95rem',
+                                        color: 'var(--text-color)'
+                                    }}
+                                >
+                                    ✓ {feature}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                ))}
+            </div>
 
-                <div className="chart-card full-width" style={{ marginTop: "32px" }}>
-                    <h2>📋 Package Options</h2>
-                    <div className="stats-grid">
-                        <div className="stat-card" style={{ flexDirection: "column", alignItems: "flex-start", padding: "24px" }}>
-                            <h3 style={{ color: "#667eea" }}>Basic</h3>
-                            <div style={{ fontSize: "2em", margin: "16px 0" }}>
-                                $99<span style={{ fontSize: "0.5em", opacity: 0.7 }}>/mo</span>
-                            </div>
-                            <ul style={{ listStyle: "none", padding: 0, width: "100%" }}>
-                                <li>✓ 50 Personnel</li>
-                                <li>✓ Basic Reports</li>
-                                <li>✓ 3 Door Access</li>
-                                <li>✓ Email Support</li>
-                            </ul>
+            <div className="card" style={{ marginTop: "3rem", padding: '2rem' }}>
+                <h2 style={{ marginBottom: '2rem', textAlign: 'center' }}>📋 Package Options</h2>
+                <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', 
+                    gap: '2rem' 
+                }}>
+                    <div className="card" style={{ padding: "2rem", textAlign: 'center' }}>
+                        <h3 style={{ color: "var(--primary-color)", marginBottom: '1rem' }}>Basic</h3>
+                        <div style={{ fontSize: "2.5em", margin: "1rem 0", fontWeight: 'bold', color: 'var(--text-color)' }}>
+                            $99<span style={{ fontSize: "0.4em", opacity: 0.7, fontWeight: 'normal' }}>/mo</span>
                         </div>
+                        <ul style={{ listStyle: "none", padding: 0, textAlign: 'left', marginTop: '1.5rem' }}>
+                            <li style={{ padding: '0.5rem 0' }}>✓ 50 Personnel</li>
+                            <li style={{ padding: '0.5rem 0' }}>✓ Basic Reports</li>
+                            <li style={{ padding: '0.5rem 0' }}>✓ 3 Door Access</li>
+                            <li style={{ padding: '0.5rem 0' }}>✓ Email Support</li>
+                        </ul>
+                    </div>
 
-                        <div className="stat-card" style={{ flexDirection: "column", alignItems: "flex-start", padding: "24px", border: "2px solid #667eea" }}>
-                            <h3 style={{ color: "#667eea" }}>Pro ⭐</h3>
-                            <div style={{ fontSize: "2em", margin: "16px 0" }}>
-                                $199<span style={{ fontSize: "0.5em", opacity: 0.7 }}>/mo</span>
-                            </div>
-                            <ul style={{ listStyle: "none", padding: 0, width: "100%" }}>
-                                <li>✓ 200 Personnel</li>
-                                <li>✓ All Reports</li>
-                                <li>✓ Unlimited Doors</li>
-                                <li>✓ Priority Support</li>
-                                <li>✓ Reward System</li>
-                            </ul>
+                    <div className="card" style={{ padding: "2rem", border: "2px solid var(--primary-color)", textAlign: 'center', position: 'relative' }}>
+                        <div style={{ 
+                            position: 'absolute', 
+                            top: '-12px', 
+                            right: '20px', 
+                            background: 'var(--primary-color)', 
+                            color: 'white', 
+                            padding: '0.25rem 0.75rem', 
+                            borderRadius: '12px',
+                            fontSize: '0.85rem',
+                            fontWeight: 'bold'
+                        }}>POPULAR</div>
+                        <h3 style={{ color: "var(--primary-color)", marginBottom: '1rem' }}>Pro ⭐</h3>
+                        <div style={{ fontSize: "2.5em", margin: "1rem 0", fontWeight: 'bold', color: 'var(--text-color)' }}>
+                            $199<span style={{ fontSize: "0.4em", opacity: 0.7, fontWeight: 'normal' }}>/mo</span>
                         </div>
+                        <ul style={{ listStyle: "none", padding: 0, textAlign: 'left', marginTop: '1.5rem' }}>
+                            <li style={{ padding: '0.5rem 0' }}>✓ 200 Personnel</li>
+                            <li style={{ padding: '0.5rem 0' }}>✓ All Reports</li>
+                            <li style={{ padding: '0.5rem 0' }}>✓ Unlimited Doors</li>
+                            <li style={{ padding: '0.5rem 0' }}>✓ Priority Support</li>
+                            <li style={{ padding: '0.5rem 0' }}>✓ Reward System</li>
+                        </ul>
+                    </div>
 
-                        <div className="stat-card" style={{ flexDirection: "column", alignItems: "flex-start", padding: "24px" }}>
-                            <h3 style={{ color: "#667eea" }}>Enterprise</h3>
-                            <div style={{ fontSize: "2em", margin: "16px 0" }}>Custom Price</div>
-                            <ul style={{ listStyle: "none", padding: 0, width: "100%" }}>
-                                <li>✓ Unlimited Personnel</li>
-                                <li>✓ Custom Integrations</li>
-                                <li>✓ Custom Development</li>
-                                <li>✓ 24/7 Support</li>
-                                <li>✓ Training & Consulting</li>
-                            </ul>
-                        </div>
+                    <div className="card" style={{ padding: "2rem", textAlign: 'center' }}>
+                        <h3 style={{ color: "var(--primary-color)", marginBottom: '1rem' }}>Enterprise</h3>
+                        <div style={{ fontSize: "1.75em", margin: "1rem 0", fontWeight: 'bold', color: 'var(--text-color)' }}>Custom Price</div>
+                        <ul style={{ listStyle: "none", padding: 0, textAlign: 'left', marginTop: '1.5rem' }}>
+                            <li style={{ padding: '0.5rem 0' }}>✓ Unlimited Personnel</li>
+                            <li style={{ padding: '0.5rem 0' }}>✓ Custom Integrations</li>
+                            <li style={{ padding: '0.5rem 0' }}>✓ Custom Development</li>
+                            <li style={{ padding: '0.5rem 0' }}>✓ 24/7 Support</li>
+                            <li style={{ padding: '0.5rem 0' }}>✓ Training & Consulting</li>
+                        </ul>
                     </div>
                 </div>
             </div>
