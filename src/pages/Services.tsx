@@ -1,4 +1,8 @@
+import useScrollAnimation from "../hooks/useScrollAnimation";
+import "../styles/Home.css";
+
 function Services() {
+    useScrollAnimation();
     const services = [
         {
             icon: "🔐",
@@ -51,10 +55,27 @@ function Services() {
     ];
 
     return (
-        <div className="fade-in" style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        <div className="fade-in home-page" style={{ maxWidth: '1400px', margin: '0 auto' }}>
+            <div className="animated-background" aria-hidden="true">
+                <div className="floating-shape shape-1"></div>
+                <div className="floating-shape shape-2"></div>
+                <div className="floating-shape shape-3"></div>
+                <div className="floating-shape shape-4"></div>
+                <div className="floating-shape shape-5"></div>
+                <div className="gradient-orb orb-1"></div>
+                <div className="gradient-orb orb-2"></div>
+                <div className="gradient-orb orb-3"></div>
+                <div className="sparkle" style={{ top: '12%', left: '22%', animationDuration: '8s', animationDelay: '0s' }}></div>
+                <div className="sparkle" style={{ top: '38%', left: '8%', animationDuration: '10s', animationDelay: '1s' }}></div>
+                <div className="sparkle" style={{ top: '20%', left: '70%', animationDuration: '9s', animationDelay: '0.1s' }}></div>
+            </div>
             <div className="page-header">
-                <h1>Our Services</h1>
-                <p>Comprehensive solutions we offer with TeamPro</p>
+                <div className="hero-card-wrapper fade-in-up">
+                    <div className="hero-card">
+                        <h1>Our Services</h1>
+                        <p>Comprehensive solutions we offer with TeamPro</p>
+                    </div>
+                </div>
             </div>
 
             <div
@@ -106,65 +127,6 @@ function Services() {
                         </ul>
                     </div>
                 ))}
-            </div>
-
-            <div className="card" style={{ marginTop: "3rem", padding: '2rem' }}>
-                <h2 style={{ marginBottom: '2rem', textAlign: 'center' }}>📋 Package Options</h2>
-                <div style={{ 
-                    display: 'grid', 
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', 
-                    gap: '2rem' 
-                }}>
-                    <div className="card" style={{ padding: "2rem", textAlign: 'center' }}>
-                        <h3 style={{ color: "var(--primary-color)", marginBottom: '1rem' }}>Basic</h3>
-                        <div style={{ fontSize: "2.5em", margin: "1rem 0", fontWeight: 'bold', color: 'var(--text-color)' }}>
-                            $99<span style={{ fontSize: "0.4em", opacity: 0.7, fontWeight: 'normal' }}>/mo</span>
-                        </div>
-                        <ul style={{ listStyle: "none", padding: 0, textAlign: 'left', marginTop: '1.5rem' }}>
-                            <li style={{ padding: '0.5rem 0' }}>✓ 50 Personnel</li>
-                            <li style={{ padding: '0.5rem 0' }}>✓ Basic Reports</li>
-                            <li style={{ padding: '0.5rem 0' }}>✓ 3 Door Access</li>
-                            <li style={{ padding: '0.5rem 0' }}>✓ Email Support</li>
-                        </ul>
-                    </div>
-
-                    <div className="card" style={{ padding: "2rem", border: "2px solid var(--primary-color)", textAlign: 'center', position: 'relative' }}>
-                        <div style={{ 
-                            position: 'absolute', 
-                            top: '-12px', 
-                            right: '20px', 
-                            background: 'var(--primary-color)', 
-                            color: 'white', 
-                            padding: '0.25rem 0.75rem', 
-                            borderRadius: '12px',
-                            fontSize: '0.85rem',
-                            fontWeight: 'bold'
-                        }}>POPULAR</div>
-                        <h3 style={{ color: "var(--primary-color)", marginBottom: '1rem' }}>Pro ⭐</h3>
-                        <div style={{ fontSize: "2.5em", margin: "1rem 0", fontWeight: 'bold', color: 'var(--text-color)' }}>
-                            $199<span style={{ fontSize: "0.4em", opacity: 0.7, fontWeight: 'normal' }}>/mo</span>
-                        </div>
-                        <ul style={{ listStyle: "none", padding: 0, textAlign: 'left', marginTop: '1.5rem' }}>
-                            <li style={{ padding: '0.5rem 0' }}>✓ 200 Personnel</li>
-                            <li style={{ padding: '0.5rem 0' }}>✓ All Reports</li>
-                            <li style={{ padding: '0.5rem 0' }}>✓ Unlimited Doors</li>
-                            <li style={{ padding: '0.5rem 0' }}>✓ Priority Support</li>
-                            <li style={{ padding: '0.5rem 0' }}>✓ Reward System</li>
-                        </ul>
-                    </div>
-
-                    <div className="card" style={{ padding: "2rem", textAlign: 'center' }}>
-                        <h3 style={{ color: "var(--primary-color)", marginBottom: '1rem' }}>Enterprise</h3>
-                        <div style={{ fontSize: "1.75em", margin: "1rem 0", fontWeight: 'bold', color: 'var(--text-color)' }}>Custom Price</div>
-                        <ul style={{ listStyle: "none", padding: 0, textAlign: 'left', marginTop: '1.5rem' }}>
-                            <li style={{ padding: '0.5rem 0' }}>✓ Unlimited Personnel</li>
-                            <li style={{ padding: '0.5rem 0' }}>✓ Custom Integrations</li>
-                            <li style={{ padding: '0.5rem 0' }}>✓ Custom Development</li>
-                            <li style={{ padding: '0.5rem 0' }}>✓ 24/7 Support</li>
-                            <li style={{ padding: '0.5rem 0' }}>✓ Training & Consulting</li>
-                        </ul>
-                    </div>
-                </div>
             </div>
         </div>
     );

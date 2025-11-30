@@ -16,6 +16,11 @@
   min-height: 100vh;
 }
 
+.home-page, .dashboard-page {
+  position: relative;
+  z-index: 2;
+}
+
 /* Animated Background */
 .animated-background {
   position: fixed;
@@ -40,7 +45,7 @@
   position: absolute;
   inset: 0;
   z-index: 0;
-  background: linear-gradient(120deg, rgba(102,126,234,0.15), rgba(240,147,251,0.08), rgba(79,172,254,0.08));
+  background: linear-gradient(120deg, rgba(102,126,234,0.08), rgba(240,147,251,0.04), rgba(79,172,254,0.04));
   background-size: 200% 200%;
   animation: gradientShift 18s ease-in-out infinite;
   mix-blend-mode: screen;
@@ -53,7 +58,7 @@
   inset: 0;
   z-index: 0;
   background-image: repeating-linear-gradient(135deg, rgba(255,255,255,0.01) 0px, rgba(255,255,255,0.01) 1px, transparent 1px, transparent 8px);
-  opacity: 0.75;
+  opacity: 0.12;
   transform: translateZ(0);
   animation: stripesMove 20s linear infinite;
   pointer-events: none;
@@ -240,6 +245,7 @@
   box-shadow: 0 6px 40px rgba(2,6,23,0.24);
   backdrop-filter: blur(8px) saturate(1.2);
   position: relative;
+  z-index: 3;
 }
 
 .home-hero h1 {
@@ -339,6 +345,67 @@
   margin: 0 auto;
   padding: 2rem 1.5rem;
   width: 100%;
+}
+
+/* Dashboard-specific layout */
+.dashboard-hero {
+  padding: 2rem 1rem 0;
+  position: relative;
+  z-index: 1;
+}
+
+.dashboard-hero-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.hero-tabs {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.dashboard-layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 2rem;
+  max-width: 1400px;
+  margin: 1.5rem auto 3rem;
+  padding: 0 1.5rem;
+}
+
+.dashboard-sidebar {
+  position: sticky;
+  top: 90px;
+  height: calc(100vh - 120px);
+  overflow: auto;
+  padding: 0;
+  align-self: start;
+}
+
+.stats-area {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.dashboard-main {
+  min-height: 400px;
+}
+
+/* Small screens: single column */
+@media (max-width: 1024px) {
+  .dashboard-layout {
+    grid-template-columns: 1fr;
+    padding: 0 1rem;
+  }
+  .dashboard-sidebar {
+    position: relative;
+    top: 0;
+    height: auto;
+  }
 }
 
 .main-content h1 {

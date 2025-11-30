@@ -1,9 +1,31 @@
+import useScrollAnimation from "../hooks/useScrollAnimation";
+import "../styles/Home.css";
+
 function About() {
+    useScrollAnimation();
     return (
-        <div className="about-page fade-in" style={{ maxWidth: '1200px', margin: '0 auto' }}>
+        <div className="about-page fade-in home-page" style={{ maxWidth: '1200px', margin: '0 auto' }}>
+            {/* same animated background as Home for visual parity */}
+            <div className="animated-background" aria-hidden="true">
+                <div className="floating-shape shape-1"></div>
+                <div className="floating-shape shape-2"></div>
+                <div className="floating-shape shape-3"></div>
+                <div className="floating-shape shape-4"></div>
+                <div className="floating-shape shape-5"></div>
+                <div className="gradient-orb orb-1"></div>
+                <div className="gradient-orb orb-2"></div>
+                <div className="gradient-orb orb-3"></div>
+                <div className="sparkle" style={{ top: '16%', left: '18%', animationDuration: '8s', animationDelay: '0s' }}></div>
+                <div className="sparkle" style={{ top: '44%', left: '10%', animationDuration: '10s', animationDelay: '1s' }}></div>
+                <div className="sparkle" style={{ top: '22%', left: '68%', animationDuration: '9s', animationDelay: '0.1s' }}></div>
+            </div>
             <div className="page-header">
-                <h1>About Us</h1>
-                <p>TeamPro Personnel Tracking System</p>
+                <div className="hero-card-wrapper fade-in-up">
+                    <div className="hero-card">
+                        <h1>About Us</h1>
+                        <p>TeamPro Personnel Tracking System</p>
+                    </div>
+                </div>
             </div>
 
             <div className="content-section" style={{ animation: 'fadeIn 0.6s ease-out' }}>

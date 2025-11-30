@@ -14,6 +14,13 @@
     --card-shadow: 0 4px 16px rgba(17, 24, 39, 0.06);
     --glass: rgba(255, 255, 255, 0.8);
     --section-bg: #ffffff;
+    /* Compatibility aliases for other theme variable names used across the project */
+    --text-color: var(--text);
+    --text-color-secondary: var(--muted);
+    --primary-color: var(--primary);
+    --border-color: var(--border);
+    --background-color: var(--bg);
+    --section-bg: var(--surface, var(--section-bg));
 }
 
 /* Base layout */

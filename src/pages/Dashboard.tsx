@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
+import useScrollAnimation from "../hooks/useScrollAnimation";
+import "../styles/Home.css";
 import { useCurrentAccount } from "@mysten/dapp-kit";
 import SuiConnectButton from "../components/SuiConnectButton";
 import { useIdentityEvents, useDoors, useMachines } from "../hooks/useIdentity";
@@ -16,6 +18,7 @@ function isValidEvent(event: unknown): event is EventData {
 }
 
 function Dashboard() {
+    useScrollAnimation();
     const [selectedView, setSelectedView] = useState("overview");
     const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null);
     const currentAccount = useCurrentAccount();
@@ -129,65 +132,92 @@ function Dashboard() {
     }
 
     return (
-        <div className="dashboard-page fade-in">
-            <div className="dashboard-header">
-                <h1>Dashboard</h1>
-                <div className="tabs">
+        <div className="dashboard-page fade-in home-page">
+            {/* Animated Background */}
+            <div className="animated-background" aria-hidden="true">
+                <div className="floating-shape shape-1"></div>
+                <div className="floating-shape shape-2"></div>
+                <div className="floating-shape shape-3"></div>
+                <div className="floating-shape shape-4"></div>
+                <div className="floating-shape shape-5"></div>
+                <div className="gradient-orb orb-1"></div>
+                <div className="gradient-orb orb-2"></div>
+                <div className="gradient-orb orb-3"></div>
+            </div>
+
+            <div className="dashboard-hero">
+                <div className="hero-card-wrapper fade-in-up">
+                    <div className="hero-card dashboard-hero-card">
+                        <h1>Dashboard</h1>
+                        <p>Real-time factory tracking & insights</p>
+                        <div className="tabs hero-tabs">
                     <button className={`tab ${selectedView === "overview" ? "tab-active" : ""}`} onClick={() => setSelectedView("overview")}>Overview</button>
                     <button className={`tab ${selectedView === "doors" ? "tab-active" : ""}`} onClick={() => setSelectedView("doors")}>Doors</button>
                     <button className={`tab ${selectedView === "machines" ? "tab-active" : ""}`} onClick={() => setSelectedView("machines")}>Devices</button>
                     <button className={`tab ${selectedView === "employees" ? "tab-active" : ""}`} onClick={() => setSelectedView("employees")}>Employees</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div className="stats-grid" style={{ animation: 'fadeIn 0.6s ease-out' }}>
-                {realtimeStats.map((stat, index) => (
-                    <div className="stat-card card" key={index}>
-                        <StatCard title={stat.title} value={stat.value.toString()} icon={stat.icon} />
-                    </div>
-                ))}
-            </div>
-
-            <div style={{ animation: 'fadeIn 0.8s ease-out' }}>
-                {selectedView === "overview" && (
-                    <div style={{ 
-                        display: 'grid', 
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 400px), 1fr))', 
-                        gap: '2rem',
-                        marginTop: '1rem'
-                    }}>
-                        <div className="chart-card card">
-                            <h2>Door Access (24h)</h2>
-                            <DoorAccessChart data={doorAccessData} loading={eventsLoading} />
-                        </div>
-                        <div className="chart-card card">
-                            <h2>Machine Usage (Hours)</h2>
-                            <MachineUsageChart data={machineUsageData} loading={eventsLoading} />
+            <div className="dashboard-layout">
+                <aside className="dashboard-sidebar">
+                    <div className="stats-area" style={{ animation: 'fadeIn 0.6s ease-out' }}>
+                        <div className="stats-grid">
+                            {realtimeStats.map((stat, index) => (
+                                <div className="stat-card card" key={index}>
+                                    <StatCard title={stat.title} value={stat.value.toString()} icon={stat.icon} />
+                                </div>
+                            ))}
                         </div>
                     </div>
-                )}
+                </aside>
 
-                {selectedView === "doors" && (
-                    <div className="table-card card" style={{ marginTop: '1rem' }}>
-                        <h2>Doors</h2>
-                        <DoorGrid doors={doors} loading={doorsLoading} onEntryClick={() => {}} onExitClick={() => {}} />
-                    </div>
-                )}
-                
-                {selectedView === "machines" && (
-                    <div className="table-card card" style={{ marginTop: '1rem' }}>
-                        <h2>Devices</h2>
-                        <MachineGrid machines={machines} loading={machinesLoading} />
-                    </div>
-                )}
+                <main className="dashboard-main">
+                    <div style={{ animation: 'fadeIn 0.8s ease-out' }}>
+                        {selectedView === "overview" && (
+                            <div style={{ 
+                                display: 'grid', 
+                                gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 400px), 1fr))', 
+                                gap: '2rem',
+                                marginTop: '1rem'
+                            }}>
+                                <div className="chart-card card">
+                                    <h2>Door Access (24h)</h2>
+                                    <DoorAccessChart data={doorAccessData} loading={eventsLoading} />
+                                </div>
+                                <div className="chart-card card">
+                                    <h2>Machine Usage (Hours)</h2>
+                                    <MachineUsageChart data={machineUsageData} loading={eventsLoading} />
+                                </div>
+                            </div>
+                        )}
 
-                {selectedView === "employees" && (
-                     <div className="table-card card" style={{ marginTop: '1rem' }}>
-                         <h2>Employees</h2>
-                         <EmployeeList employees={workerCards} clockEvents={parsedEvents.clockEvents} onSelectEmployee={setSelectedEmployee} selectedEmployee={selectedEmployee} loading={loadingCards} />
-                     </div>
-                )}
+                        {selectedView === "doors" && (
+                            <div className="table-card card" style={{ marginTop: '1rem' }}>
+                                <h2>Doors</h2>
+                                <DoorGrid doors={doors} loading={doorsLoading} onEntryClick={() => {}} onExitClick={() => {}} />
+                            </div>
+                        )}
+                        
+                        {selectedView === "machines" && (
+                            <div className="table-card card" style={{ marginTop: '1rem' }}>
+                                <h2>Devices</h2>
+                                <MachineGrid machines={machines} loading={machinesLoading} />
+                            </div>
+                        )}
+
+                        {selectedView === "employees" && (
+                            <div className="table-card card" style={{ marginTop: '1rem' }}>
+                                <h2>Employees</h2>
+                                <EmployeeList employees={workerCards} clockEvents={parsedEvents.clockEvents} onSelectEmployee={setSelectedEmployee} selectedEmployee={selectedEmployee} loading={loadingCards} />
+                            </div>
+                        )}
+                    </div>
+                </main>
             </div>
+
+            
         </div>
     );
 }
