@@ -94,19 +94,8 @@ function Dashboard() {
     }, [parsedEvents.machineEvents]);
 
     // Filter only active doors and machines for display
-    const activeDoors = useMemo(() => {
-        const filtered = doors.filter((door) => door.is_active);
-        console.log("All doors:", doors);
-        console.log("Active doors:", filtered);
-        return filtered;
-    }, [doors]);
-
-    const activeMachines = useMemo(() => {
-        const filtered = machines.filter((machine) => machine.is_active);
-        console.log("All machines:", machines);
-        console.log("Active machines:", filtered);
-        return filtered;
-    }, [machines]);
+    const activeDoors = useMemo(() => doors.filter((door) => door.is_active), [doors]);
+    const activeMachines = useMemo(() => machines.filter((machine) => machine.is_active), [machines]);
 
     const realtimeStats = useMemo(() => {
         // Active workers count from worker cards (only check is_active, not is_in_shift)

@@ -1,7 +1,7 @@
 interface AwardIssuanceFormProps {
-    values: { worker_card_id: string; award_type: string; points: string; description: string };
+    values: { worker_address: string; award_type: string; points: string; description: string };
     loading: boolean;
-    onChange: (v: { worker_card_id: string; award_type: string; points: string; description: string }) => void;
+    onChange: (v: { worker_address: string; award_type: string; points: string; description: string }) => void;
     onSubmit: (e: React.FormEvent) => Promise<void> | void;
 }
 
@@ -11,15 +11,15 @@ function AwardIssuanceForm({ values, loading, onChange, onSubmit }: AwardIssuanc
             <h2>Give Award to Employee</h2>
             <form onSubmit={onSubmit}>
                 <div className="form-group">
-                    <label>Worker Card ID</label>
+                    <label>Worker Wallet Address</label>
                     <input
                         type="text"
                         placeholder="0x..."
-                        value={values.worker_card_id}
-                        onChange={(e) => onChange({ ...values, worker_card_id: e.target.value })}
+                        value={values.worker_address}
+                        onChange={(e) => onChange({ ...values, worker_address: e.target.value })}
                         required
                     />
-                    <small>Employee's WorkerCard object ID</small>
+                    <small>Employee's wallet address</small>
                 </div>
                 <div className="form-group">
                     <label>Award Type</label>

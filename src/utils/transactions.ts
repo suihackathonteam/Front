@@ -113,14 +113,41 @@ export function buildRegisterMachineWithCategoryTx(adminCapId: string, form: Reg
 /**
  * Issue an award
  */
+/**
+ * Issue an award directly to worker address (doesn't require WorkerCard)
+ */
+export function buildIssueAwardToAddressTx(adminCapId: string, workerAddress: string, form: IssueAwardForm): Transaction {
+    const tx = new Transaction();
+
+    tx.moveCall({
+        target: `${getModuleId()}::issue_award_to_address`,
+        arguments: [
+            tx.object(adminCapId),
+            tx.object(CONTRACT_CONFIG.SYSTEM_REGISTRY_ID),
+            tx.pure.address(workerAddress),
+            tx.pure(bcs.vector(bcs.u8()).serialize(stringToBytes(form.award_type))),
+            tx.pure.u64(form.points),
+            tx.pure(bcs.vector(bcs.u8()).serialize(stringToBytes(form.description))),
+        ],
+    });
+
+    return tx;
+}
+
+/**
+ * Issue an award to a worker (old method - requires WorkerCard)
+ */
 export function buildIssueAwardTx(adminCapId: string, workerCardId: string, form: IssueAwardForm): Transaction {
     const tx = new Transaction();
+
+    // Use sharedObjectRef for objects owned by others that we need to mutate
+    const workerCard = tx.object(workerCardId);
 
     tx.moveCall({
         target: `${getModuleId()}::issue_award`,
         arguments: [
             tx.object(adminCapId),
-            tx.object(workerCardId),
+            workerCard,
             tx.object(CONTRACT_CONFIG.SYSTEM_REGISTRY_ID),
             tx.pure(bcs.vector(bcs.u8()).serialize(stringToBytes(form.award_type))),
             tx.pure.u64(form.points),
@@ -146,13 +173,7 @@ export function buildRecordDoorAccessTx(
 
     tx.moveCall({
         target: `${getModuleId()}::record_door_access`,
-        arguments: [
-            tx.object(workerCardId),
-            tx.object(CONTRACT_CONFIG.SYSTEM_REGISTRY_ID),
-            tx.pure.u64(doorId),
-            tx.pure.u8(accessType),
-            tx.object("0x6"), // Clock object
-        ],
+        arguments: [tx.object(workerCardId), tx.object(CONTRACT_CONFIG.SYSTEM_REGISTRY_ID), tx.pure.u64(doorId), tx.pure.u8(accessType)],
     });
 
     return tx;

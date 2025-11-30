@@ -5,7 +5,7 @@ import {
     buildIssueWorkerCardTx,
     buildRegisterDoorTx,
     buildRegisterMachineTx,
-    buildIssueAwardTx,
+    buildIssueAwardToAddressTx,
     buildUpdateDoorTx,
     buildUpdateMachineTx,
     buildActivateDoorTx,
@@ -45,7 +45,7 @@ function AdminPanel() {
     const [workerForm, setWorkerForm] = useState({ worker_address: "", card_number: "", name: "", department: "" });
     const [doorForm, setDoorForm] = useState({ name: "", location: "" });
     const [machineForm, setMachineForm] = useState({ name: "", machine_type: "", location: "" });
-    const [awardForm, setAwardForm] = useState({ worker_card_id: "", award_type: "", points: "", description: "" });
+    const [awardForm, setAwardForm] = useState({ worker_address: "", award_type: "", points: "", description: "" });
 
     // Edit modal states
     const [editDoorModal, setEditDoorModal] = useState<{ open: boolean; doorId: number | null; name: string; location: string }>({
@@ -355,14 +355,18 @@ function AdminPanel() {
                                 onChange={setAwardForm}
                                 onSubmit={(e) => {
                                     e.preventDefault();
-                                    if (!adminCapId) return;
-                                    const tx = buildIssueAwardTx(adminCapId, awardForm.worker_card_id, {
+                                    if (!adminCapId || !isValidSuiAddress(awardForm.worker_address)) {
+                                        alert("Invalid worker wallet address");
+                                        return;
+                                    }
+                                    
+                                    const tx = buildIssueAwardToAddressTx(adminCapId, awardForm.worker_address, {
                                         award_type: awardForm.award_type,
                                         points: Number(awardForm.points),
                                         description: awardForm.description,
                                     });
                                     handleTransaction(tx, () => {
-                                        setAwardForm({ worker_card_id: "", award_type: "", points: "", description: "" });
+                                        setAwardForm({ worker_address: "", award_type: "", points: "", description: "" });
                                     });
                                 }}
                             />

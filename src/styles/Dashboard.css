@@ -2,6 +2,21 @@
 .dashboard-container {
     min-height: 100vh;
     background: var(--bg);
+    position: relative;
+}
+
+.dashboard-page {
+    position: relative;
+}
+
+.dashboard-page > *:not(.animated-background) {
+    position: relative;
+    z-index: 5;
+}
+
+.dashboard-container > *:not(.animated-background) {
+    position: relative;
+    z-index: 5;
 }
 
 .dashboard-main {
@@ -36,7 +51,7 @@
     background: var(--surface);
     padding: 1.5rem;
     border-radius: 12px;
-    border: 1px solid rgba(14,21,32,0.04);
+    border: 1px solid rgba(14, 21, 32, 0.04);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -72,7 +87,7 @@
     background: var(--surface);
     padding: 1.5rem;
     border-radius: 12px;
-    border: 1px solid rgba(14,21,32,0.04);
+    border: 1px solid rgba(14, 21, 32, 0.04);
     margin-bottom: 2rem;
 }
 
@@ -105,7 +120,7 @@
     padding: 1rem;
     color: var(--muted);
     font-weight: 600;
-    border-bottom: 2px solid rgba(14,21,32,0.04);
+    border-bottom: 2px solid rgba(14, 21, 32, 0.04);
     font-size: 0.9rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -114,7 +129,7 @@
 .employee-table td {
     padding: 1rem;
     color: var(--text);
-    border-bottom: 1px solid rgba(14,21,32,0.04);
+    border-bottom: 1px solid rgba(14, 21, 32, 0.04);
 }
 
 /* Badges */
@@ -147,7 +162,7 @@
     background: var(--surface);
     padding: 1.5rem;
     border-radius: 12px;
-    border: 1px solid rgba(14,21,32,0.04);
+    border: 1px solid rgba(14, 21, 32, 0.04);
 }
 
 .chart-card h3 {
@@ -173,7 +188,7 @@
     background: var(--surface);
     padding: 1.5rem;
     border-radius: 12px;
-    border: 1px solid rgba(14,21,32,0.04);
+    border: 1px solid rgba(14, 21, 32, 0.04);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -193,7 +208,7 @@
 
 .feed-card {
     background: var(--surface);
-    border: 1px solid rgba(14,21,32,0.04);
+    border: 1px solid rgba(14, 21, 32, 0.04);
     border-radius: 12px;
     padding: 1.5rem;
 }
@@ -215,13 +230,13 @@
 
 .feed-item {
     padding: 1rem;
-    background: rgba(14,21,32,0.02);
+    background: rgba(14, 21, 32, 0.02);
     border-radius: 8px;
     transition: all 0.2s ease;
 }
 
 .feed-item:hover {
-    background: rgba(14,21,32,0.04);
+    background: rgba(14, 21, 32, 0.04);
 }
 
 .feed-title {
@@ -237,10 +252,10 @@
 
 /* Footer */
 .dashboard-footer {
-    background: rgba(14,21,32,0.02);
+    background: rgba(14, 21, 32, 0.02);
     padding: 1.5rem 2rem;
     text-align: center;
-    border-top: 1px solid rgba(14,21,32,0.04);
+    border-top: 1px solid rgba(14, 21, 32, 0.04);
 }
 
 .dashboard-footer p {

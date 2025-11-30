@@ -549,26 +549,68 @@ export function useWorkerShiftHistory(workerCardId?: string) {
  */
 export function useWorkerAwardHistory(workerCardId?: string) {
     const client = useSuiClient();
+    const account = useCurrentAccount();
     const [awardHistory, setAwardHistory] = useState<AwardHistoryItem[]>([]);
     const [totalAwardPoints, setTotalAwardPoints] = useState(0);
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        if (!workerCardId) return;
-
         const fetchHistory = async () => {
             try {
                 setLoading(true);
-                const card = await client.getObject({
-                    id: workerCardId,
-                    options: { showContent: true },
-                });
+                let cardAwards: AwardHistoryItem[] = [];
+                let cardPoints = 0;
 
-                if (card.data?.content && card.data.content.dataType === "moveObject") {
-                    const fields = card.data.content.fields as SuiMoveObjectFields;
-                    const awardHist = Array.isArray(fields.award_history) ? (fields.award_history as AwardHistoryItem[]) : [];
-                    setAwardHistory(awardHist);
-                    setTotalAwardPoints(Number(fields.total_award_points) || 0);
+                // Fetch awards from WorkerCard if exists
+                if (workerCardId) {
+                    const card = await client.getObject({
+                        id: workerCardId,
+                        options: { showContent: true },
+                    });
+
+                    if (card.data?.content && card.data.content.dataType === "moveObject") {
+                        const fields = card.data.content.fields as SuiMoveObjectFields;
+                        cardAwards = Array.isArray(fields.award_history) ? (fields.award_history as AwardHistoryItem[]) : [];
+                        cardPoints = Number(fields.total_award_points) || 0;
+                    }
+                }
+
+                // Fetch Award NFTs owned by the user
+                if (account?.address) {
+                    const awardObjects = await client.getOwnedObjects({
+                        owner: account.address,
+                        filter: {
+                            StructType: `${CONTRACT_CONFIG.PACKAGE_ID}::identity::Award`,
+                        },
+                        options: { showContent: true },
+                    });
+
+                    const decoder = new TextDecoder();
+                    const nftAwards = awardObjects.data.map((obj) => {
+                        if (obj.data?.content && obj.data.content.dataType === "moveObject") {
+                            const fields = obj.data.content.fields as any;
+                            return {
+                                worker_address: fields.worker_address || account.address,
+                                card_number: [], // NFT awards don't have card numbers
+                                award_type: fields.award_type ? decoder.decode(new Uint8Array(fields.award_type)) : "",
+                                points: Number(fields.points) || 0,
+                                description: fields.description ? decoder.decode(new Uint8Array(fields.description)) : "",
+                                timestamp_ms: Number(fields.timestamp_ms) || 0,
+                            };
+                        }
+                        return null;
+                    }).filter((award): award is AwardHistoryItem => award !== null);
+
+                    // Combine WorkerCard awards and NFT awards
+                    const allAwards = [...cardAwards, ...nftAwards];
+                    const totalPoints = cardPoints + nftAwards.reduce((sum, award) => sum + award.points, 0);
+
+                    setAwardHistory(allAwards);
+                    setTotalAwardPoints(totalPoints);
+                } else {
+                    // If no account, just show WorkerCard awards
+                    setAwardHistory(cardAwards);
+                    setTotalAwardPoints(cardPoints);
                 }
             } catch (err) {
                 console.error("Award history fetch error:", err);
@@ -580,7 +622,7 @@ export function useWorkerAwardHistory(workerCardId?: string) {
         };
 
         fetchHistory();
-    }, [workerCardId]);
+    }, [workerCardId, account?.address]);
 
     return { awardHistory, totalAwardPoints, loading };
 }

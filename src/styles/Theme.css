@@ -193,6 +193,8 @@ body {
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
     padding: 18px;
     border: 1px solid rgba(14, 21, 32, 0.06);
+    position: relative;
+    z-index: 1;
 }
 
 /* Resource grid */

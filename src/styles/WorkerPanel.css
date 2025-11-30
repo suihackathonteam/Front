@@ -3,6 +3,12 @@
     min-height: 100vh;
     background: var(--bg);
     padding: 0;
+    position: relative;
+}
+
+.worker-container > *:not(.animated-background) {
+    position: relative;
+    z-index: 5;
 }
 
 .worker-header {
@@ -30,8 +36,9 @@
 }
 
 .worker-title p {
-    color: var(--muted);
+    color: #333;
     font-size: 1.1rem;
+    font-weight: 500;
 }
 
 /* Quick Actions */
@@ -111,6 +118,8 @@
     cursor: pointer;
     transition: all 0.2s ease;
     white-space: nowrap;
+    position: relative;
+    z-index: 10;
 }
 
 .clock-btn:disabled,
@@ -408,6 +417,8 @@
     color: var(--text);
     font-size: 1rem;
     transition: all 0.2s ease;
+    position: relative;
+    z-index: 1;
 }
 
 .form-group input:focus,
