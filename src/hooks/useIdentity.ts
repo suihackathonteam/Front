@@ -428,8 +428,8 @@ export function useIdentityEvents(eventType: string) {
 
         fetchEvents();
 
-        // Refresh every 10 seconds
-        const interval = setInterval(fetchEvents, 10000);
+        // Refresh every 60 seconds (reduced from 10 seconds to reduce re-renders)
+        const interval = setInterval(fetchEvents, 60000);
         return () => clearInterval(interval);
     }, [client, eventType]);
 

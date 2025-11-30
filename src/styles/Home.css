@@ -417,6 +417,11 @@
   gap: 1.5rem;
 }
 
+.stats-area .stats-grid .stat-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+}
+
 .dashboard-main {
   min-height: 400px;
 }

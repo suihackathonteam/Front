@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import useScrollAnimation from "../hooks/useScrollAnimation";
 import "../styles/Home.css";
+import "../styles/DashboardEnhanced.css";
 import { useCurrentAccount } from "@mysten/dapp-kit";
 import SuiConnectButton from "../components/SuiConnectButton";
 import { useIdentityEvents, useDoors, useMachines } from "../hooks/useIdentity";
@@ -28,8 +29,25 @@ function Dashboard() {
     const { doors, loading: doorsLoading } = useDoors();
     const { machines, loading: machinesLoading } = useMachines();
 
-    const [workerCards, setWorkerCards] = useState<any[]>([]);
-    const [loadingCards, setLoadingCards] = useState(true);
+    // Memoize worker cards to prevent unnecessary re-renders
+    const workerCards = useMemo(() => {
+        if (!currentAccount) return [];
+        const uniqueWorkers = new Map();
+        allEvents.forEach((event: any) => {
+            if (!isValidEvent(event)) return;
+            const address = String(event.parsedJson?.worker_address || "");
+            if (!address || uniqueWorkers.has(address)) return;
+            uniqueWorkers.set(address, {
+                id: address,
+                worker_address: address,
+                name: `Worker ${address.slice(0, 6)}`,
+                department: "General",
+            });
+        });
+        return Array.from(uniqueWorkers.values());
+    }, [currentAccount, allEvents.length]); // Only re-compute when event count changes
+
+    const [loadingCards] = useState(false);
 
     const parsedEvents = useMemo(() => {
         const doorEvents: any[] = [];
@@ -49,30 +67,6 @@ function Dashboard() {
         });
         return { doorEvents, machineEvents, clockEvents, awardEvents };
     }, [allEvents]);
-
-    useEffect(() => {
-        const fetchWorkerCards = async () => {
-            if (!currentAccount) {
-                setLoadingCards(false);
-                return;
-            }
-            const uniqueWorkers = new Map();
-            allEvents.forEach((event: any) => {
-                if (!isValidEvent(event)) return;
-                const address = String(event.parsedJson?.worker_address || "");
-                if (!address || uniqueWorkers.has(address)) return;
-                uniqueWorkers.set(address, {
-                    id: address,
-                    worker_address: address,
-                    name: `Worker ${address.slice(0, 6)}`,
-                    department: "General",
-                });
-            });
-            setWorkerCards(Array.from(uniqueWorkers.values()));
-            setLoadingCards(false);
-        };
-        fetchWorkerCards();
-    }, [currentAccount, allEvents]);
     
     const doorAccessData = useMemo(() => {
         const hourlyData: { [key: string]: { entries: number; exits: number } } = {};
