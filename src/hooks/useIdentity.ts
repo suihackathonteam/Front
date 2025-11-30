@@ -586,24 +586,26 @@ export function useWorkerAwardHistory(workerCardId?: string) {
                     });
 
                     const decoder = new TextDecoder();
-                    const nftAwards = awardObjects.data.map((obj) => {
-                        if (obj.data?.content && obj.data.content.dataType === "moveObject") {
-                            const fields = obj.data.content.fields as any;
-                            return {
-                                worker_address: fields.worker_address || account.address,
-                                card_number: [], // NFT awards don't have card numbers
-                                award_type: fields.award_type ? decoder.decode(new Uint8Array(fields.award_type)) : "",
-                                points: Number(fields.points) || 0,
-                                description: fields.description ? decoder.decode(new Uint8Array(fields.description)) : "",
-                                timestamp_ms: Number(fields.timestamp_ms) || 0,
-                            };
-                        }
-                        return null;
-                    }).filter((award): award is AwardHistoryItem => award !== null);
+                    const nftAwards: AwardHistoryItem[] = awardObjects.data
+                        .map((obj) => {
+                            if (obj.data?.content && obj.data.content.dataType === "moveObject") {
+                                const fields = obj.data.content.fields as any;
+                                return {
+                                    worker_address: fields.worker_address || account.address,
+                                    card_number: [], // NFT awards don't have card numbers
+                                    award_type: fields.award_type ? decoder.decode(new Uint8Array(fields.award_type)) : "",
+                                    points: Number(fields.points) || 0,
+                                    description: fields.description ? decoder.decode(new Uint8Array(fields.description)) : "",
+                                    timestamp_ms: Number(fields.timestamp_ms) || 0,
+                                } as AwardHistoryItem;
+                            }
+                            return null;
+                        })
+                        .filter((award): award is AwardHistoryItem => award !== null);
 
                     // Combine WorkerCard awards and NFT awards
-                    const allAwards = [...cardAwards, ...nftAwards];
-                    const totalPoints = cardPoints + nftAwards.reduce((sum, award) => sum + award.points, 0);
+                    const allAwards: AwardHistoryItem[] = [...cardAwards, ...nftAwards];
+                    const totalPoints = cardPoints + nftAwards.reduce((sum, award) => sum + (Number(award.points) || 0), 0);
 
                     setAwardHistory(allAwards);
                     setTotalAwardPoints(totalPoints);
