@@ -7,6 +7,7 @@ export interface WorkerCard {
     is_active: boolean;
     total_work_hours: number;
     total_production: number;
+    current_shift_production: number;
     efficiency_score: number;
     last_checkpoint_hash: number[];
     current_shift_start_ms: number;
@@ -23,7 +24,8 @@ export interface Door {
 export interface Machine {
     machine_id: number;
     name: string;
-    machine_type: string;
+    machine_type: string; // existing field used for contract compatibility
+    category?: string; // UI-level category field for future contract update
     location: string;
     is_active: boolean;
     total_usage_time_ms?: number;
@@ -90,6 +92,7 @@ export interface RegisterDoorForm {
 export interface RegisterMachineForm {
     name: string;
     machine_type: string;
+    category?: string;
     location: string;
 }
 
@@ -126,6 +129,7 @@ export interface UpdateDoorForm {
 export interface UpdateMachineForm {
     name: string;
     machine_type: string;
+    category?: string;
     location: string;
 }
 

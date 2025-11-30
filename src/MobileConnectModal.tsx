@@ -21,32 +21,30 @@ const MobileConnectModal: React.FC<Props> = ({ open, onClose }) => {
   const copyUrl = async () => {
     try {
       await navigator.clipboard.writeText(currentUrl)
-      alert('URL kopyalandı! Slush Wallet tarayıcısına yapıştırın.')
+      alert('URL copied! Paste into Slush Wallet browser.')
     } catch (e) {
-      alert('Kopyalama başarısız: ' + currentUrl)
+      alert('Copy failed: ' + currentUrl)
     }
   }
 
   return (
     <div className="mc-modal-overlay" role="dialog" aria-modal="true">
       <div className="mc-modal">
-        <button className="mc-modal-close" onClick={onClose} aria-label="Kapat">×</button>
-        <h3>Slush Wallet'a Bağlan</h3>
-        <p>
-          Slush Wallet'ta giriş yapın ve ardından bu sayfaya geri dönün.
-        </p>
+        <button className="mc-modal-close" onClick={onClose} aria-label="Close">×</button>
+        <h3>Connect with Slush Wallet</h3>
+        <p>Open Slush Wallet and connect; then return to this page.</p>
 
         <div className="mc-actions">
           <button onClick={openSlushWallet} className="mc-btn mc-btn-primary">
-            🚀 Slush Wallet'ta Aç (Otomatik)
+            🚀 Open in Slush Wallet (Auto)
           </button>
           <button onClick={copyUrl} className="mc-btn">
-            📋 URL'yi Kopyala
+            📋 Copy URL
           </button>
         </div>
 
         <div style={{ textAlign: 'center', marginTop: '1rem' }}>
-          <p style={{ marginBottom: '0.5rem' }}>Veya QR kodunu Slush uygulamasındaki QR tarayıcı ile tara:</p>
+          <p style={{ marginBottom: '0.5rem' }}>Or scan the QR code with the Slush app's QR scanner:</p>
           <img
             src={`https://chart.googleapis.com/chart?chs=300x300&cht=qr&chl=${encodeURIComponent(currentUrl)}`}
             alt="Open in Slush QR"
@@ -55,7 +53,7 @@ const MobileConnectModal: React.FC<Props> = ({ open, onClose }) => {
         </div>
 
         <p className="mc-hint">
-          Alternatif: Slush Wallet'ın dahili tarayıcısında bu URL'yi açın: <br />
+          Alternative: open this URL in Slush Wallet's internal browser: <br />
           <code style={{fontSize: '0.85em', wordBreak: 'break-all'}}>{window.location.href}</code>
         </p>
       </div>

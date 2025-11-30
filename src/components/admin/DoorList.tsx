@@ -3,11 +3,14 @@ import type { Door } from "../../types/identity";
 interface DoorListProps {
     doors: Door[];
     loading: boolean;
+    onEdit?: (door_id: number, name: string, location: string) => void;
+    onActivate?: (door_id: number) => void;
+    onDeactivate?: (door_id: number) => void;
 }
 
-function DoorList({ doors, loading }: DoorListProps) {
+function DoorList({ doors, loading, onEdit, onActivate, onDeactivate }: DoorListProps) {
     return (
-        <div className="admin-form-card">
+        <div className="admin-form-card card">
             <h2>Registered Doors ({doors.length})</h2>
             {loading ? (
                 <p className="loading-text">Loading doors...</p>
@@ -28,6 +31,23 @@ function DoorList({ doors, loading }: DoorListProps) {
                             <div className="list-item-details">
                                 <span className="detail-label">Door ID:</span>
                                 <span className="detail-value">{door.door_id}</span>
+                            </div>
+                            <div className="list-item-actions">
+                                <button
+                                    className="action-btn edit-btn"
+                                    onClick={() => onEdit?.(door.door_id, door.name, door.location)}
+                                >
+                                    ✏️ Edit
+                                </button>
+                                {!door.is_active ? (
+                                    <button className="action-btn activate-btn" onClick={() => onActivate?.(door.door_id)}>
+                                        ✅ Activate
+                                    </button>
+                                ) : (
+                                    <button className="action-btn deactivate-btn" onClick={() => onDeactivate?.(door.door_id)}>
+                                        🚫 Deactivate
+                                    </button>
+                                )}
                             </div>
                         </div>
                     ))}

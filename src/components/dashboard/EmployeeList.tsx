@@ -11,6 +11,7 @@ interface WorkerCard {
     is_active: boolean;
     total_work_hours: number;
     total_production: number;
+    current_shift_production: number;
     efficiency_score: number;
     event_count: number;
 }
@@ -56,7 +57,8 @@ function EmployeeList({ employees, clockEvents, onSelectEmployee, selectedEmploy
                         <th>Department</th>
                         <th>Card Number</th>
                         <th>Work Hours</th>
-                        <th>Production</th>
+                        <th>Total Prod.</th>
+                        <th>Shift Prod.</th>
                         <th>Efficiency</th>
                         <th>Events</th>
                         <th>Status</th>
@@ -76,6 +78,9 @@ function EmployeeList({ employees, clockEvents, onSelectEmployee, selectedEmploy
                                 <td>{card.card_number}</td>
                                 <td>{(card.total_work_hours / (1000 * 3600)).toFixed(1)}h</td>
                                 <td>{card.total_production} items</td>
+                                <td>
+                                    <span className={`shift-production ${isActive ? "active" : ""}`}>{card.current_shift_production} items</span>
+                                </td>
                                 <td>
                                     <span
                                         className={`efficiency-badge ${card.efficiency_score >= 80 ? "high" : card.efficiency_score >= 50 ? "medium" : "low"}`}

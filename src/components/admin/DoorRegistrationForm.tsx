@@ -7,7 +7,7 @@ interface DoorRegistrationFormProps {
 
 function DoorRegistrationForm({ values, loading, onChange, onSubmit }: DoorRegistrationFormProps) {
     return (
-        <div className="admin-form-card">
+        <div className="admin-form-card card">
             <h2>Add New Door</h2>
             <form onSubmit={onSubmit}>
                 <div className="form-group">

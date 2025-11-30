@@ -1,6 +1,7 @@
 import LoadingSpinner from "../shared/LoadingSpinner";
 import "../../styles/components/Shared.css";
 import "../../styles/components/ResourceGrid.css";
+import "../../styles/Theme.css";
 
 interface Door {
     door_id: number;
@@ -12,9 +13,11 @@ interface Door {
 interface DoorGridProps {
     doors: Door[];
     loading?: boolean;
+    onEntryClick?: (doorId: number) => void;
+    onExitClick?: (doorId: number) => void;
 }
 
-function DoorGrid({ doors, loading }: DoorGridProps) {
+function DoorGrid({ doors, loading, onEntryClick, onExitClick }: DoorGridProps) {
     if (loading) {
         return <LoadingSpinner size="medium" message="Loading doors..." />;
     }
@@ -30,7 +33,7 @@ function DoorGrid({ doors, loading }: DoorGridProps) {
     return (
         <div className="resource-grid">
             {doors.map((door) => (
-                <div key={door.door_id} className="resource-card door-card">
+                        <div key={door.door_id} className="resource-card door-card">
                     <div className="resource-icon">🚪</div>
                     <div className="resource-info">
                         <h4>{door.name}</h4>
@@ -40,6 +43,14 @@ function DoorGrid({ doors, loading }: DoorGridProps) {
                             <span className="resource-id">ID: {door.door_id}</span>
                         </div>
                     </div>
+                            <div className="door-card-actions">
+                                <button className="door-btn" onClick={() => onEntryClick?.(door.door_id)} disabled={!door.is_active} title="Record Entry">
+                                    Entry
+                                </button>
+                                <button className="door-btn" onClick={() => onExitClick?.(door.door_id)} disabled={!door.is_active} title="Record Exit">
+                                    Exit
+                                </button>
+                            </div>
                 </div>
             ))}
         </div>

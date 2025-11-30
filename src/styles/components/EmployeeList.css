@@ -1,6 +1,6 @@
 .employee-list-container {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
     border-radius: 12px;
     padding: 1.5rem;
     overflow-x: auto;
@@ -16,21 +16,21 @@
     text-align: left;
     padding: 1rem;
     font-weight: 600;
-    color: rgba(255, 255, 255, 0.8);
-    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+    color: #4b5563;
+    border-bottom: 2px solid #e5e7eb;
     font-size: 0.9rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
 
 .employee-table tbody tr {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid #e5e7eb;
     transition: background-color 0.2s;
     cursor: pointer;
 }
 
 .employee-table tbody tr:hover {
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: #f9fafb;
 }
 
 .employee-table tbody tr.selected {
@@ -40,7 +40,7 @@
 
 .employee-table tbody td {
     padding: 1rem;
-    color: rgba(255, 255, 255, 0.9);
+    color: #1d1d1f;
     font-size: 0.9rem;
 }
 
@@ -95,7 +95,7 @@
     align-items: center;
     justify-content: center;
     min-height: 300px;
-    color: rgba(255, 255, 255, 0.5);
+    color: #9ca3af;
     font-size: 1rem;
 }
 

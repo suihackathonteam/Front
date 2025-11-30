@@ -89,16 +89,65 @@ export function buildRegisterMachineTx(adminCapId: string, form: RegisterMachine
 }
 
 /**
+ * Register a new machine/resource with optional category (requires contract change)
+ * NOTE: The Move contract must support this signature.
+ */
+export function buildRegisterMachineWithCategoryTx(adminCapId: string, form: RegisterMachineForm): Transaction {
+    const tx = new Transaction();
+
+    tx.moveCall({
+        target: `${getModuleId()}::register_machine`,
+        arguments: [
+            tx.object(adminCapId),
+            tx.object(CONTRACT_CONFIG.SYSTEM_REGISTRY_ID),
+            tx.pure(bcs.vector(bcs.u8()).serialize(stringToBytes(form.name))),
+            tx.pure(bcs.vector(bcs.u8()).serialize(stringToBytes(form.machine_type || ""))),
+            tx.pure(bcs.vector(bcs.u8()).serialize(stringToBytes(form.location || ""))),
+            tx.pure(bcs.vector(bcs.u8()).serialize(stringToBytes(form.category || ""))),
+        ],
+    });
+
+    return tx;
+}
+
+/**
  * Issue an award
+ */
+/**
+ * Issue an award directly to worker address (doesn't require WorkerCard)
+ */
+export function buildIssueAwardToAddressTx(adminCapId: string, workerAddress: string, form: IssueAwardForm): Transaction {
+    const tx = new Transaction();
+
+    tx.moveCall({
+        target: `${getModuleId()}::issue_award_to_address`,
+        arguments: [
+            tx.object(adminCapId),
+            tx.object(CONTRACT_CONFIG.SYSTEM_REGISTRY_ID),
+            tx.pure.address(workerAddress),
+            tx.pure(bcs.vector(bcs.u8()).serialize(stringToBytes(form.award_type))),
+            tx.pure.u64(form.points),
+            tx.pure(bcs.vector(bcs.u8()).serialize(stringToBytes(form.description))),
+        ],
+    });
+
+    return tx;
+}
+
+/**
+ * Issue an award to a worker (old method - requires WorkerCard)
  */
 export function buildIssueAwardTx(adminCapId: string, workerCardId: string, form: IssueAwardForm): Transaction {
     const tx = new Transaction();
+
+    // Use sharedObjectRef for objects owned by others that we need to mutate
+    const workerCard = tx.object(workerCardId);
 
     tx.moveCall({
         target: `${getModuleId()}::issue_award`,
         arguments: [
             tx.object(adminCapId),
-            tx.object(workerCardId),
+            workerCard,
             tx.object(CONTRACT_CONFIG.SYSTEM_REGISTRY_ID),
             tx.pure(bcs.vector(bcs.u8()).serialize(stringToBytes(form.award_type))),
             tx.pure.u64(form.points),
@@ -145,6 +194,7 @@ export function buildRecordMachineUsageTx(workerCardId: string, form: RecordMach
             tx.pure.u64(form.usage_duration_ms),
             tx.pure.u64(form.production_count),
             tx.pure.u64(form.efficiency_percentage),
+            tx.object("0x6"), // Clock object
         ],
     });
 
@@ -163,7 +213,12 @@ export function buildClockInOutTx(
 
     tx.moveCall({
         target: `${getModuleId()}::clock_in_out`,
-        arguments: [tx.object(workerCardId), tx.object(registryId), tx.pure.u8(actionType)],
+        arguments: [
+            tx.object(workerCardId),
+            tx.object(registryId),
+            tx.pure.u8(actionType),
+            tx.object("0x6"), // Clock object
+        ],
     });
 
     return tx;
@@ -297,6 +352,28 @@ export function buildUpdateMachineTx(adminCapId: string, machineId: number, form
             tx.pure(bcs.vector(bcs.u8()).serialize(stringToBytes(form.name))),
             tx.pure(bcs.vector(bcs.u8()).serialize(stringToBytes(form.machine_type))),
             tx.pure(bcs.vector(bcs.u8()).serialize(stringToBytes(form.location))),
+        ],
+    });
+
+    return tx;
+}
+
+/**
+ * Update machine with category (requires contract change)
+ */
+export function buildUpdateMachineWithCategoryTx(adminCapId: string, machineId: number, form: UpdateMachineForm): Transaction {
+    const tx = new Transaction();
+
+    tx.moveCall({
+        target: `${getModuleId()}::update_machine`,
+        arguments: [
+            tx.object(adminCapId),
+            tx.object(CONTRACT_CONFIG.SYSTEM_REGISTRY_ID),
+            tx.pure.u64(machineId),
+            tx.pure(bcs.vector(bcs.u8()).serialize(stringToBytes(form.name))),
+            tx.pure(bcs.vector(bcs.u8()).serialize(stringToBytes(form.machine_type || ""))),
+            tx.pure(bcs.vector(bcs.u8()).serialize(stringToBytes(form.location || ""))),
+            tx.pure(bcs.vector(bcs.u8()).serialize(stringToBytes(form.category || ""))),
         ],
     });
 

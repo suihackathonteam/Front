@@ -1,6 +1,6 @@
 .stat-card {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
     border-left: 4px solid;
     border-radius: 12px;
     padding: 1.5rem;
@@ -12,9 +12,9 @@
 }
 
 .stat-card:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: #f9fafb;
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .stat-icon {
@@ -35,7 +35,7 @@
 
 .stat-title {
     font-size: 0.85rem;
-    color: rgba(255, 255, 255, 0.6);
+    color: #6b7280;
     margin: 0 0 0.5rem 0;
     font-weight: 500;
     text-transform: uppercase;
@@ -47,11 +47,12 @@
     font-weight: bold;
     margin: 0;
     line-height: 1;
+    color: #1d1d1f;
 }
 
 .stat-change {
     font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.5);
+    color: #9ca3af;
     margin-top: 0.5rem;
     display: block;
 }

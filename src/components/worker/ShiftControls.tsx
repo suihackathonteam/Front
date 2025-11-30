@@ -4,9 +4,7 @@ interface ShiftControlsProps {
     onClockIn: () => Promise<void> | void;
     onClockOut: () => Promise<void> | void;
     productionUnits: number;
-    efficiencyPercentage: number;
     onChangeProductionUnits: (v: number) => void;
-    onChangeEfficiency: (v: number) => void;
     onIncrementProduction: () => void;
     onDoorEntry?: () => Promise<void> | void;
     onDoorExit?: () => Promise<void> | void;
@@ -18,9 +16,7 @@ function ShiftControls({
     onClockIn,
     onClockOut,
     productionUnits,
-    efficiencyPercentage,
     onChangeProductionUnits,
-    onChangeEfficiency,
     onIncrementProduction,
     onDoorEntry,
     onDoorExit,
@@ -28,20 +24,28 @@ function ShiftControls({
     return (
         <div className="quick-actions shift-controls">
             <button
-                className="clock-btn clock-in"
+                className={`clock-btn clock-in ${shiftActive ? "disabled-shift" : ""}`}
                 onClick={onClockIn}
                 disabled={txLoading || shiftActive}
-                title={shiftActive ? "A shift is already active" : "Start shift"}
+                title={txLoading ? "Transaction in progress..." : shiftActive ? "Already in an active shift" : "Start shift"}
+                style={{
+                    opacity: shiftActive ? 0.5 : 1,
+                    cursor: shiftActive || txLoading ? "not-allowed" : "pointer",
+                }}
             >
-                🕐 Start Shift
+                {txLoading && !shiftActive ? "⏳ " : ""}🕐 Clock In
             </button>
             <button
-                className="clock-btn clock-out"
+                className={`clock-btn clock-out ${!shiftActive ? "disabled-shift" : ""}`}
                 onClick={onClockOut}
                 disabled={txLoading || !shiftActive}
-                title={!shiftActive ? "No active shift" : "End shift"}
+                title={txLoading ? "Transaction in progress..." : !shiftActive ? "No active shift" : "End shift"}
+                style={{
+                    opacity: !shiftActive ? 0.5 : 1,
+                    cursor: !shiftActive || txLoading ? "not-allowed" : "pointer",
+                }}
             >
-                🕐 End Shift
+                {txLoading && shiftActive ? "⏳ " : ""}🕐 Clock Out
             </button>
             <div className="production-inline-form">
                 <input
@@ -51,33 +55,26 @@ function ShiftControls({
                     onChange={(e) => onChangeProductionUnits(Number(e.target.value))}
                     placeholder="Units"
                     disabled={!shiftActive || txLoading}
-                />
-                <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    value={efficiencyPercentage}
-                    onChange={(e) => onChangeEfficiency(Number(e.target.value))}
-                    placeholder="Eff%"
-                    disabled={!shiftActive || txLoading}
+                    title={!shiftActive ? "Start shift first" : "Production units"}
+                    style={{ width: "100px" }}
                 />
                 <button
                     className="prod-btn"
                     onClick={onIncrementProduction}
                     disabled={!shiftActive || txLoading || productionUnits <= 0}
-                    title={!shiftActive ? "Start a shift first" : "Record production"}
+                    title={!shiftActive ? "Start shift first" : "Record production"}
                 >
-                    📦 Record
+                    📦 Record Production
                 </button>
             </div>
             {onDoorEntry && (
-                <button className="door-btn door-entry" onClick={onDoorEntry} disabled={txLoading}>
-                    🚪 Entry
+                <button className="door-btn door-entry" onClick={onDoorEntry} disabled={txLoading} title="Door entry">
+                    🔓 Entry
                 </button>
             )}
             {onDoorExit && (
-                <button className="door-btn door-exit" onClick={onDoorExit} disabled={txLoading}>
-                    🚪 Exit
+                <button className="door-btn door-exit" onClick={onDoorExit} disabled={txLoading} title="Door exit">
+                    🔒 Exit
                 </button>
             )}
         </div>
