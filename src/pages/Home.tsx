@@ -1,11 +1,12 @@
 import useScrollAnimation from "../hooks/useScrollAnimation";
+import "../styles/Home.css";
 
 function Home() {
     useScrollAnimation();
     return (
         <div className="home-page fade-in">
             {/* Animated Background */}
-            <div className="animated-background">
+            <div className="animated-background" aria-hidden="true">
                 <div className="floating-shape shape-1"></div>
                 <div className="floating-shape shape-2"></div>
                 <div className="floating-shape shape-3"></div>
@@ -14,15 +15,28 @@ function Home() {
                 <div className="gradient-orb orb-1"></div>
                 <div className="gradient-orb orb-2"></div>
                 <div className="gradient-orb orb-3"></div>
+                {/* Decorative sparkles — positioned to feel organic */}
+                <div className="sparkle" style={{ top: '12%', left: '22%', animationDuration: '8s', animationDelay: '0s' }}></div>
+                <div className="sparkle" style={{ top: '38%', left: '8%', animationDuration: '10s', animationDelay: '1s' }}></div>
+                <div className="sparkle" style={{ top: '20%', left: '70%', animationDuration: '9s', animationDelay: '0.1s' }}></div>
+                <div className="sparkle" style={{ top: '64%', left: '45%', animationDuration: '11s', animationDelay: '0.3s' }}></div>
+                <div className="sparkle" style={{ top: '30%', left: '40%', animationDuration: '7s', animationDelay: '0.5s' }}></div>
+                <div className="sparkle" style={{ top: '85%', left: '12%', animationDuration: '9s', animationDelay: '0.7s' }}></div>
+                <div className="sparkle" style={{ top: '8%', left: '82%', animationDuration: '12s', animationDelay: '0.2s' }}></div>
+                <div className="sparkle" style={{ top: '55%', left: '82%', animationDuration: '7s', animationDelay: '1.5s' }}></div>
+                <div className="sparkle" style={{ top: '72%', left: '58%', animationDuration: '9s', animationDelay: '2s' }}></div>
+                <div className="sparkle" style={{ top: '40%', left: '28%', animationDuration: '10s', animationDelay: '1s' }}></div>
             </div>
 
             <section className="home-hero">
-                <div className="fade-in-up">
+                <div className="fade-in-up hero-card-wrapper">
+                    <div className="hero-card">
                     <h1>Transparent Factory Tracking, powered by Sui</h1>
                     <p>Secure, real-time entry, machines and shift tracking — built to scale for teams and factories.</p>
                     <div className="cta-buttons">
                         <button className="btn btn-primary">Get Started</button>
                         <button className="btn btn-secondary">Learn More</button>
+                    </div>
                     </div>
                 </div>
             </section>
